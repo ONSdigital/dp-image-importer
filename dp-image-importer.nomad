@@ -11,70 +11,6 @@ job "dp-image-importer" {
     auto_revert      = true
   }
 
-  group "web" {
-    count = "{{WEB_TASK_COUNT}}"
-
-    constraint {
-      attribute = "${node.class}"
-      value     = "web"
-    }
-
-    restart {
-      attempts = 3
-      delay    = "15s"
-      interval = "1m"
-      mode     = "delay"
-    }
-
-    task "dp-image-importer-web" {
-      driver = "docker"
-
-      artifact {
-        source = "s3::https://s3-eu-west-1.amazonaws.com/{{DEPLOYMENT_BUCKET}}/dp-image-importer/{{PROFILE}}/{{RELEASE}}.tar.gz"
-      }
-
-      config {
-        command = "${NOMAD_TASK_DIR}/start-task"
-
-        args = ["./dp-image-importer"]
-
-        image = "{{ECR_URL}}:concourse-{{REVISION}}"
-
-      }
-
-      service {
-        name = "dp-image-importer"
-        port = "http"
-        tags = ["web"]
-
-        check {
-          type     = "http"
-          path     = "/health"
-          interval = "10s"
-          timeout  = "2s"
-        }
-      }
-
-      resources {
-        cpu    = "{{WEB_RESOURCE_CPU}}"
-        memory = "{{WEB_RESOURCE_MEM}}"
-
-        network {
-          port "http" {}
-        }
-      }
-
-      template {
-        source      = "${NOMAD_TASK_DIR}/vars-template"
-        destination = "${NOMAD_TASK_DIR}/vars"
-      }
-
-      vault {
-        policies = ["dp-image-importer-web"]
-      }
-    }
-  }
-
   group "publishing" {
     count = "{{PUBLISHING_TASK_COUNT}}"
 
@@ -90,7 +26,7 @@ job "dp-image-importer" {
       mode     = "delay"
     }
 
-    task "dp-image-importer-publishing" {
+    task "dp-image-importer" {
       driver = "docker"
 
       artifact {
@@ -133,7 +69,7 @@ job "dp-image-importer" {
       }
 
       vault {
-        policies = ["dp-image-importer-publishing"]
+        policies = ["dp-image-importer"]
       }
     }
   }
