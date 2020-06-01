@@ -9,11 +9,13 @@ import (
 //API provides a struct to wrap the api around
 type API struct {
 	Router *mux.Router
+	vault  VaultClienter
 }
 
-func Setup(ctx context.Context, r *mux.Router) *API {
+func Setup(ctx context.Context, r *mux.Router, vault VaultClienter) *API {
 	api := &API{
 		Router: r,
+		vault:  vault,
 	}
 
 	r.HandleFunc("/hello", HelloHandler()).Methods("GET")

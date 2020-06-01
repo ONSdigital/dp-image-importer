@@ -2,11 +2,14 @@ package service_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"testing"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	"github.com/ONSdigital/dp-image-importer/api"
+	apiMock "github.com/ONSdigital/dp-image-importer/api/mock"
 	"github.com/ONSdigital/dp-image-importer/config"
 	"github.com/ONSdigital/dp-image-importer/service"
 	"github.com/ONSdigital/dp-image-importer/service/mock"
@@ -23,8 +26,13 @@ var (
 )
 
 var (
+	errVault       = errors.New("vault error")
 	errHealthcheck = errors.New("healthCheck error")
 )
+
+var funcDoGetVaultErr = func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+	return nil, errVault
+}
 
 var funcDoGetHealthcheckErr = func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 	return nil, errHealthcheck
@@ -37,6 +45,10 @@ var funcDoGetHTTPServerNil = func(bindAddr string, router http.Handler) service.
 func TestRun(t *testing.T) {
 
 	Convey("Having a set of mocked dependencies", t, func() {
+
+		vaultMock := &apiMock.VaultClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
 
 		hcMock := &serviceMock.HealthCheckerMock{
 			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
@@ -51,6 +63,10 @@ func TestRun(t *testing.T) {
 			},
 		}
 
+		funcDoGetVaultOk := func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
+			return vaultMock, nil
+		}
+
 		funcDoGetHealthcheckOk := func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 			return hcMock, nil
 		}
@@ -59,9 +75,26 @@ func TestRun(t *testing.T) {
 			return serverMock
 		}
 
+		Convey("Given that initialising vault returns an error", func() {
+			initMock := &serviceMock.InitialiserMock{
+				DoGetHTTPServerFunc: funcDoGetHTTPServerNil,
+				DoGetVaultFunc:      funcDoGetVaultErr,
+			}
+			svcErrors := make(chan error, 1)
+			svcList := service.NewServiceList(initMock)
+			_, err := service.Run(ctx, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
+
+			Convey("Then service Run fails with the same error and the flag is not set", func() {
+				So(err, ShouldResemble, errVault)
+				So(svcList.Vault, ShouldBeFalse)
+				So(svcList.HealthCheck, ShouldBeFalse)
+			})
+		})
+
 		Convey("Given that initialising healthcheck returns an error", func() {
 			initMock := &serviceMock.InitialiserMock{
 				DoGetHTTPServerFunc:  funcDoGetHTTPServerNil,
+				DoGetVaultFunc:       funcDoGetVaultOk,
 				DoGetHealthCheckFunc: funcDoGetHealthcheckErr,
 			}
 			svcErrors := make(chan error, 1)
@@ -70,6 +103,7 @@ func TestRun(t *testing.T) {
 
 			Convey("Then service Run fails with the same error and the flag is not set", func() {
 				So(err, ShouldResemble, errHealthcheck)
+				So(svcList.Vault, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeFalse)
 			})
 		})
@@ -78,6 +112,7 @@ func TestRun(t *testing.T) {
 
 			initMock := &serviceMock.InitialiserMock{
 				DoGetHTTPServerFunc:  funcDoGetHTTPServer,
+				DoGetVaultFunc:       funcDoGetVaultOk,
 				DoGetHealthCheckFunc: funcDoGetHealthcheckOk,
 			}
 			svcErrors := make(chan error, 1)
@@ -87,19 +122,49 @@ func TestRun(t *testing.T) {
 
 			Convey("Then service Run succeeds and all the flags are set", func() {
 				So(err, ShouldBeNil)
+				So(svcList.Vault, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeTrue)
 			})
 
 			Convey("The checkers are registered and the healthcheck and http server started", func() {
-				So(len(hcMock.AddCheckCalls()), ShouldEqual, 0)
+				So(len(hcMock.AddCheckCalls()), ShouldEqual, 1)
+				So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Vault client")
 				So(len(initMock.DoGetHTTPServerCalls()), ShouldEqual, 1)
-				So(initMock.DoGetHTTPServerCalls()[0].BindAddr, ShouldEqual, ":24800")
+				So(initMock.DoGetHTTPServerCalls()[0].BindAddr, ShouldEqual, "localhost:24800")
 				So(len(hcMock.StartCalls()), ShouldEqual, 1)
 				serverWg.Wait() // Wait for HTTP server go-routine to finish
 				So(len(serverMock.ListenAndServeCalls()), ShouldEqual, 1)
 			})
 		})
 
+		Convey("Given that Checkers cannot be registered", func() {
+
+			errAddheckFail := errors.New("Error(s) registering checkers for healthcheck")
+			hcMockAddFail := &serviceMock.HealthCheckerMock{
+				AddCheckFunc: func(name string, checker healthcheck.Checker) error { return errAddheckFail },
+				StartFunc:    func(ctx context.Context) {},
+			}
+
+			initMock := &serviceMock.InitialiserMock{
+				DoGetHTTPServerFunc: funcDoGetHTTPServerNil,
+				DoGetVaultFunc:      funcDoGetVaultOk,
+				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
+					return hcMockAddFail, nil
+				},
+			}
+			svcErrors := make(chan error, 1)
+			svcList := service.NewServiceList(initMock)
+			_, err := service.Run(ctx, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
+
+			Convey("Then service Run fails, but all checks try to register", func() {
+				So(err, ShouldNotBeNil)
+				So(err.Error(), ShouldResemble, fmt.Sprintf("unable to register checkers: %s", errAddheckFail.Error()))
+				So(svcList.Vault, ShouldBeTrue)
+				So(svcList.HealthCheck, ShouldBeTrue)
+				So(len(hcMockAddFail.AddCheckCalls()), ShouldEqual, 1)
+				So(hcMockAddFail.AddCheckCalls()[0].Name, ShouldResemble, "Vault client")
+			})
+		})
 	})
 }
 
@@ -108,6 +173,10 @@ func TestClose(t *testing.T) {
 	Convey("Having a correctly initialised service", t, func() {
 
 		hcStopped := false
+
+		vaultMock := &apiMock.VaultClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
 
 		// healthcheck Stop does not depend on any other service being closed/stopped
 		hcMock := &serviceMock.HealthCheckerMock{
@@ -131,6 +200,7 @@ func TestClose(t *testing.T) {
 
 			initMock := &mock.InitialiserMock{
 				DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer { return serverMock },
+				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) { return vaultMock, nil },
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},
@@ -158,6 +228,7 @@ func TestClose(t *testing.T) {
 
 			initMock := &mock.InitialiserMock{
 				DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer { return failingserverMock },
+				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) { return vaultMock, nil },
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},

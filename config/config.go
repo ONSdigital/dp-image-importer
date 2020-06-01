@@ -12,6 +12,9 @@ type Config struct {
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
+	VaultToken                 string        `envconfig:"VAULT_TOKEN"                   json:"-"`
+	VaultAddress               string        `envconfig:"VAULT_ADDR"`
+	VaultPath                  string        `envconfig:"VAULT_PATH"`
 }
 
 var cfg *Config
@@ -24,10 +27,13 @@ func Get() (*Config, error) {
 	}
 
 	cfg := &Config{
-		BindAddr:                   ":24800",
+		BindAddr:                   "localhost:24800",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
+		VaultPath:                  "secret/shared/psk",
+		VaultAddress:               "http://localhost:8200",
+		VaultToken:                 "",
 	}
 
 	return cfg, envconfig.Process("", cfg)

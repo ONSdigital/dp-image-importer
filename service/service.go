@@ -17,6 +17,7 @@ type Service struct {
 	api         *api.API
 	serviceList *ExternalServiceList
 	healthCheck HealthChecker
+	vault       api.VaultClienter
 }
 
 // Run the service
@@ -34,8 +35,15 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	r := mux.NewRouter()
 	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
 
+	// Get Vault client
+	vault, err := serviceList.GetVault(ctx, cfg)
+	if err != nil {
+		log.Event(ctx, "failed to initialise Vault client", log.FATAL, log.Error(err))
+		return nil, err
+	}
+
 	// Setup the API
-	a := api.Setup(ctx, r)
+	a := api.Setup(ctx, r, vault)
 
 	// Get HealthCheck
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -43,7 +51,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		log.Event(ctx, "could not instantiate healthcheck", log.FATAL, log.Error(err))
 		return nil, err
 	}
-	if err := registerCheckers(ctx, hc); err != nil {
+	if err := registerCheckers(ctx, hc, vault); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -64,6 +72,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		api:         a,
 		serviceList: serviceList,
 		healthCheck: hc,
+		vault:       vault,
 	}, nil
 }
 
@@ -115,7 +124,19 @@ func (svc *Service) Close(ctx context.Context) error {
 	return nil
 }
 
-func registerCheckers(ctx context.Context, hc HealthChecker) (err error) {
-	// TODO ADD HEALTH CHECKS HERE
-	return
+func registerCheckers(ctx context.Context,
+	hc HealthChecker,
+	vault api.VaultClienter) (err error) {
+
+	hasErrors := false
+
+	if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
+		hasErrors = true
+		log.Event(ctx, "error adding check for vault", log.ERROR, log.Error(err))
+	}
+
+	if hasErrors {
+		return errors.New("Error(s) registering checkers for healthcheck")
+	}
+	return nil
 }
