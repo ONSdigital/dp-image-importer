@@ -9,6 +9,8 @@ import (
 // Config represents service configuration for dp-image-importer
 type Config struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
+	AwsRegion                  string        `envconfig:"AWS_REGION"`
+	S3PrivateBucketName        string        `envconfig:"S3_PRIVATE_BUCKET_NAME"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
@@ -28,6 +30,8 @@ func Get() (*Config, error) {
 
 	cfg := &Config{
 		BindAddr:                   "localhost:24800",
+		AwsRegion:                  "eu-west-1",
+		S3PrivateBucketName:        "csv-exported",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,

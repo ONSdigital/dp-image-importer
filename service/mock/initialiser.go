@@ -15,6 +15,7 @@ import (
 var (
 	lockInitialiserMockDoGetHTTPServer  sync.RWMutex
 	lockInitialiserMockDoGetHealthCheck sync.RWMutex
+	lockInitialiserMockDoGetS3Private   sync.RWMutex
 	lockInitialiserMockDoGetVault       sync.RWMutex
 )
 
@@ -34,6 +35,9 @@ var _ service.Initialiser = &InitialiserMock{}
 //             DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 // 	               panic("mock out the DoGetHealthCheck method")
 //             },
+//             DoGetS3PrivateFunc: func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+// 	               panic("mock out the DoGetS3Private method")
+//             },
 //             DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
 // 	               panic("mock out the DoGetVault method")
 //             },
@@ -49,6 +53,9 @@ type InitialiserMock struct {
 
 	// DoGetHealthCheckFunc mocks the DoGetHealthCheck method.
 	DoGetHealthCheckFunc func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error)
+
+	// DoGetS3PrivateFunc mocks the DoGetS3Private method.
+	DoGetS3PrivateFunc func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error)
 
 	// DoGetVaultFunc mocks the DoGetVault method.
 	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error)
@@ -72,6 +79,13 @@ type InitialiserMock struct {
 			GitCommit string
 			// Version is the version argument value.
 			Version string
+		}
+		// DoGetS3Private holds details about calls to the DoGetS3Private method.
+		DoGetS3Private []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Cfg is the cfg argument value.
+			Cfg *config.Config
 		}
 		// DoGetVault holds details about calls to the DoGetVault method.
 		DoGetVault []struct {
@@ -158,6 +172,41 @@ func (mock *InitialiserMock) DoGetHealthCheckCalls() []struct {
 	lockInitialiserMockDoGetHealthCheck.RLock()
 	calls = mock.calls.DoGetHealthCheck
 	lockInitialiserMockDoGetHealthCheck.RUnlock()
+	return calls
+}
+
+// DoGetS3Private calls DoGetS3PrivateFunc.
+func (mock *InitialiserMock) DoGetS3Private(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+	if mock.DoGetS3PrivateFunc == nil {
+		panic("InitialiserMock.DoGetS3PrivateFunc: method is nil but Initialiser.DoGetS3Private was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Cfg *config.Config
+	}{
+		Ctx: ctx,
+		Cfg: cfg,
+	}
+	lockInitialiserMockDoGetS3Private.Lock()
+	mock.calls.DoGetS3Private = append(mock.calls.DoGetS3Private, callInfo)
+	lockInitialiserMockDoGetS3Private.Unlock()
+	return mock.DoGetS3PrivateFunc(ctx, cfg)
+}
+
+// DoGetS3PrivateCalls gets all the calls that were made to DoGetS3Private.
+// Check the length with:
+//     len(mockedInitialiser.DoGetS3PrivateCalls())
+func (mock *InitialiserMock) DoGetS3PrivateCalls() []struct {
+	Ctx context.Context
+	Cfg *config.Config
+} {
+	var calls []struct {
+		Ctx context.Context
+		Cfg *config.Config
+	}
+	lockInitialiserMockDoGetS3Private.RLock()
+	calls = mock.calls.DoGetS3Private
+	lockInitialiserMockDoGetS3Private.RUnlock()
 	return calls
 }
 

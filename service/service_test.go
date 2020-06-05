@@ -27,11 +27,16 @@ var (
 
 var (
 	errVault       = errors.New("vault error")
+	errS3Private   = errors.New("S3 private error")
 	errHealthcheck = errors.New("healthCheck error")
 )
 
 var funcDoGetVaultErr = func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) {
 	return nil, errVault
+}
+
+var funcDoS3PrivateErr = func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+	return nil, errS3Private
 }
 
 var funcDoGetHealthcheckErr = func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
@@ -47,6 +52,10 @@ func TestRun(t *testing.T) {
 	Convey("Having a set of mocked dependencies", t, func() {
 
 		vaultMock := &apiMock.VaultClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
+
+		s3PrivateMock := &apiMock.S3ClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -67,6 +76,10 @@ func TestRun(t *testing.T) {
 			return vaultMock, nil
 		}
 
+		funcDoGetS3PrivateOk := func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+			return s3PrivateMock, nil
+		}
+
 		funcDoGetHealthcheckOk := func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 			return hcMock, nil
 		}
@@ -79,6 +92,7 @@ func TestRun(t *testing.T) {
 			initMock := &serviceMock.InitialiserMock{
 				DoGetHTTPServerFunc: funcDoGetHTTPServerNil,
 				DoGetVaultFunc:      funcDoGetVaultErr,
+				DoGetS3PrivateFunc:  funcDoGetS3PrivateOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -87,6 +101,25 @@ func TestRun(t *testing.T) {
 			Convey("Then service Run fails with the same error and the flag is not set", func() {
 				So(err, ShouldResemble, errVault)
 				So(svcList.Vault, ShouldBeFalse)
+				So(svcList.S3Private, ShouldBeFalse)
+				So(svcList.HealthCheck, ShouldBeFalse)
+			})
+		})
+
+		Convey("Given that initialising s3 private bucket returns an error", func() {
+			initMock := &serviceMock.InitialiserMock{
+				DoGetHTTPServerFunc: funcDoGetHTTPServerNil,
+				DoGetVaultFunc:      funcDoGetVaultOk,
+				DoGetS3PrivateFunc:  funcDoS3PrivateErr,
+			}
+			svcErrors := make(chan error, 1)
+			svcList := service.NewServiceList(initMock)
+			_, err := service.Run(ctx, svcList, testBuildTime, testGitCommit, testVersion, svcErrors)
+
+			Convey("Then service Run fails with the same error and the flag is not set", func() {
+				So(err, ShouldResemble, errS3Private)
+				So(svcList.Vault, ShouldBeTrue)
+				So(svcList.S3Private, ShouldBeFalse)
 				So(svcList.HealthCheck, ShouldBeFalse)
 			})
 		})
@@ -96,6 +129,7 @@ func TestRun(t *testing.T) {
 				DoGetHTTPServerFunc:  funcDoGetHTTPServerNil,
 				DoGetVaultFunc:       funcDoGetVaultOk,
 				DoGetHealthCheckFunc: funcDoGetHealthcheckErr,
+				DoGetS3PrivateFunc:   funcDoGetS3PrivateOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -104,6 +138,7 @@ func TestRun(t *testing.T) {
 			Convey("Then service Run fails with the same error and the flag is not set", func() {
 				So(err, ShouldResemble, errHealthcheck)
 				So(svcList.Vault, ShouldBeTrue)
+				So(svcList.S3Private, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeFalse)
 			})
 		})
@@ -114,6 +149,7 @@ func TestRun(t *testing.T) {
 				DoGetHTTPServerFunc:  funcDoGetHTTPServer,
 				DoGetVaultFunc:       funcDoGetVaultOk,
 				DoGetHealthCheckFunc: funcDoGetHealthcheckOk,
+				DoGetS3PrivateFunc:   funcDoGetS3PrivateOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -123,12 +159,14 @@ func TestRun(t *testing.T) {
 			Convey("Then service Run succeeds and all the flags are set", func() {
 				So(err, ShouldBeNil)
 				So(svcList.Vault, ShouldBeTrue)
+				So(svcList.S3Private, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeTrue)
 			})
 
 			Convey("The checkers are registered and the healthcheck and http server started", func() {
-				So(len(hcMock.AddCheckCalls()), ShouldEqual, 1)
+				So(len(hcMock.AddCheckCalls()), ShouldEqual, 2)
 				So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Vault client")
+				So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "S3 private bucket")
 				So(len(initMock.DoGetHTTPServerCalls()), ShouldEqual, 1)
 				So(initMock.DoGetHTTPServerCalls()[0].BindAddr, ShouldEqual, "localhost:24800")
 				So(len(hcMock.StartCalls()), ShouldEqual, 1)
@@ -151,6 +189,7 @@ func TestRun(t *testing.T) {
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMockAddFail, nil
 				},
+				DoGetS3PrivateFunc: funcDoGetS3PrivateOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -161,8 +200,9 @@ func TestRun(t *testing.T) {
 				So(err.Error(), ShouldResemble, fmt.Sprintf("unable to register checkers: %s", errAddheckFail.Error()))
 				So(svcList.Vault, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeTrue)
-				So(len(hcMockAddFail.AddCheckCalls()), ShouldEqual, 1)
+				So(len(hcMockAddFail.AddCheckCalls()), ShouldEqual, 2)
 				So(hcMockAddFail.AddCheckCalls()[0].Name, ShouldResemble, "Vault client")
+				So(hcMockAddFail.AddCheckCalls()[1].Name, ShouldResemble, "S3 private bucket")
 			})
 		})
 	})
@@ -175,6 +215,10 @@ func TestClose(t *testing.T) {
 		hcStopped := false
 
 		vaultMock := &apiMock.VaultClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
+
+		s3PrivateMock := &apiMock.S3ClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -201,6 +245,7 @@ func TestClose(t *testing.T) {
 			initMock := &mock.InitialiserMock{
 				DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer { return serverMock },
 				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) { return vaultMock, nil },
+				DoGetS3PrivateFunc:  func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) { return s3PrivateMock, nil },
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},
@@ -229,6 +274,7 @@ func TestClose(t *testing.T) {
 			initMock := &mock.InitialiserMock{
 				DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer { return failingserverMock },
 				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (api.VaultClienter, error) { return vaultMock, nil },
+				DoGetS3PrivateFunc:  func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) { return s3PrivateMock, nil },
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},

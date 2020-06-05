@@ -16,7 +16,7 @@ func TestSetup(t *testing.T) {
 	Convey("Given an API instance", t, func() {
 		r := mux.NewRouter()
 		ctx := context.Background()
-		api := api.Setup(ctx, r, &mock.VaultClienterMock{})
+		api := api.Setup(ctx, r, &mock.VaultClienterMock{}, &mock.S3ClienterMock{})
 
 		Convey("When created the following routes should have been added", func() {
 			// Replace the check below with any newly added api endpoints
@@ -29,7 +29,7 @@ func TestClose(t *testing.T) {
 	Convey("Given an API instance", t, func() {
 		r := mux.NewRouter()
 		ctx := context.Background()
-		api := api.Setup(ctx, r, &mock.VaultClienterMock{})
+		api := api.Setup(ctx, r, &mock.VaultClienterMock{}, &mock.S3ClienterMock{})
 
 		Convey("When the api is closed any dependencies are closed also", func() {
 			err := api.Close(ctx)

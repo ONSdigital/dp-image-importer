@@ -21,6 +21,8 @@ func TestConfig(t *testing.T) {
 
 			Convey("Then the values should be set to the expected defaults", func() {
 				So(cfg.BindAddr, ShouldEqual, "localhost:24800")
+				So(cfg.AwsRegion, ShouldEqual, "eu-west-1")
+				So(cfg.S3PrivateBucketName, ShouldEqual, "csv-exported")
 				So(cfg.GracefulShutdownTimeout, ShouldEqual, 5*time.Second)
 				So(cfg.HealthCheckInterval, ShouldEqual, 30*time.Second)
 				So(cfg.HealthCheckCriticalTimeout, ShouldEqual, 90*time.Second)
