@@ -17,6 +17,7 @@ import (
 type ExternalServiceList struct {
 	Vault       bool
 	S3Private   bool
+	S3Uploaded  bool
 	HealthCheck bool
 	Init        Initialiser
 }
@@ -26,6 +27,7 @@ func NewServiceList(initialiser Initialiser) *ExternalServiceList {
 	return &ExternalServiceList{
 		Vault:       false,
 		S3Private:   false,
+		S3Uploaded:  false,
 		HealthCheck: false,
 		Init:        initialiser,
 	}
@@ -50,13 +52,23 @@ func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) 
 	return vault, nil
 }
 
-// GetS3Private creates a S3Private client and sets the S3Private flag to true
+// GetS3Private creates a S3 client and sets the S3Private flag to true
 func (e *ExternalServiceList) GetS3Private(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
 	s3, err := e.Init.DoGetS3Private(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 	e.S3Private = true
+	return s3, nil
+}
+
+// GetS3Uploaded creates a S3 client and sets the S3Uploaded flag to true
+func (e *ExternalServiceList) GetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+	s3, err := e.Init.DoGetS3Uploaded(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	e.S3Uploaded = true
 	return s3, nil
 }
 
@@ -89,6 +101,15 @@ func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (api.VaultCli
 // DoGetS3Private returns a S3Client
 func (e *Init) DoGetS3Private(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
 	vault, err := dps3.NewClient(cfg.AwsRegion, cfg.S3PrivateBucketName, true)
+	if err != nil {
+		return nil, err
+	}
+	return vault, nil
+}
+
+// DoGetS3Uploaded returns a S3Client
+func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
+	vault, err := dps3.NewClient(cfg.AwsRegion, cfg.S3UploadedBucketName, true)
 	if err != nil {
 		return nil, err
 	}

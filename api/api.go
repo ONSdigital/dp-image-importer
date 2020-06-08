@@ -8,16 +8,18 @@ import (
 
 //API provides a struct to wrap the api around
 type API struct {
-	Router    *mux.Router
-	vault     VaultClienter
-	s3Private S3Clienter
+	Router     *mux.Router
+	vault      VaultClienter
+	s3Private  S3Clienter
+	s3Uploaded S3Clienter
 }
 
-func Setup(ctx context.Context, r *mux.Router, vault VaultClienter, s3Private S3Clienter) *API {
+func Setup(ctx context.Context, r *mux.Router, vault VaultClienter, s3Private S3Clienter, s3Uploaded S3Clienter) *API {
 	api := &API{
-		Router:    r,
-		vault:     vault,
-		s3Private: s3Private,
+		Router:     r,
+		vault:      vault,
+		s3Private:  s3Private,
+		s3Uploaded: s3Uploaded,
 	}
 
 	r.HandleFunc("/hello", HelloHandler()).Methods("GET")

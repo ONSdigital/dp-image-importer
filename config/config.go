@@ -10,10 +10,11 @@ import (
 type Config struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
 	AwsRegion                  string        `envconfig:"AWS_REGION"`
-	S3PrivateBucketName        string        `envconfig:"S3_PRIVATE_BUCKET_NAME"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
+	S3PrivateBucketName        string        `envconfig:"S3_PRIVATE_BUCKET_NAME"`
+	S3UploadedBucketName       string        `envconfig:"S3_UPLOADED_BUCKET_NAME"`
 	VaultToken                 string        `envconfig:"VAULT_TOKEN"                   json:"-"`
 	VaultAddress               string        `envconfig:"VAULT_ADDR"`
 	VaultPath                  string        `envconfig:"VAULT_PATH"`
@@ -31,10 +32,11 @@ func Get() (*Config, error) {
 	cfg := &Config{
 		BindAddr:                   "localhost:24800",
 		AwsRegion:                  "eu-west-1",
-		S3PrivateBucketName:        "csv-exported",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
+		S3PrivateBucketName:        "csv-exported",
+		S3UploadedBucketName:       "dp-frontend-florence-file-uploads",
 		VaultPath:                  "secret/shared/psk",
 		VaultAddress:               "http://localhost:8200",
 		VaultToken:                 "",

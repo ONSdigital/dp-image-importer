@@ -19,6 +19,7 @@ type Initialiser interface {
 	DoGetVault(ctx context.Context, cfg *config.Config) (api.VaultClienter, error)
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
 	DoGetS3Private(ctx context.Context, cfg *config.Config) (api.S3Clienter, error)
+	DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3Clienter, error)
 }
 
 // HTTPServer defines the required methods from the HTTP server
