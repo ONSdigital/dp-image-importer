@@ -45,12 +45,19 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	// Get S3Private client
 	s3Private, err := serviceList.GetS3Private(ctx, cfg)
 	if err != nil {
-		log.Event(ctx, "failed to initialise Vault client for private bucket", log.FATAL, log.Error(err))
+		log.Event(ctx, "failed to initialise S3 client for private bucket", log.FATAL, log.Error(err))
+		return nil, err
+	}
+
+	// Get S3Uploaded client
+	s3Uploaded, err := serviceList.GetS3Uploaded(ctx, cfg)
+	if err != nil {
+		log.Event(ctx, "failed to initialise S3 client for uploaded bucket", log.FATAL, log.Error(err))
 		return nil, err
 	}
 
 	// Setup the API
-	a := api.Setup(ctx, r, vault, s3Private)
+	a := api.Setup(ctx, r, vault, s3Private, s3Uploaded)
 
 	// Get HealthCheck
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -58,7 +65,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		log.Event(ctx, "could not instantiate healthcheck", log.FATAL, log.Error(err))
 		return nil, err
 	}
-	if err := registerCheckers(ctx, hc, vault, s3Private); err != nil {
+	if err := registerCheckers(ctx, hc, vault, s3Private, s3Uploaded); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -134,7 +141,8 @@ func (svc *Service) Close(ctx context.Context) error {
 func registerCheckers(ctx context.Context,
 	hc HealthChecker,
 	vault api.VaultClienter,
-	s3Private api.S3Clienter) (err error) {
+	s3Private api.S3Clienter,
+	s3Uploaded api.S3Clienter) (err error) {
 
 	hasErrors := false
 
@@ -146,6 +154,11 @@ func registerCheckers(ctx context.Context,
 	if err := hc.AddCheck("S3 private bucket", s3Private.Checker); err != nil {
 		hasErrors = true
 		log.Event(ctx, "error adding check for s3Private private bucket", log.ERROR, log.Error(err))
+	}
+
+	if err := hc.AddCheck("S3 uploaded bucket", s3Uploaded.Checker); err != nil {
+		hasErrors = true
+		log.Event(ctx, "error adding check for s3Private uploaded bucket", log.ERROR, log.Error(err))
 	}
 
 	if hasErrors {
