@@ -3,6 +3,7 @@ module github.com/ONSdigital/dp-image-importer
 go 1.13
 
 require (
+	github.com/ONSdigital/dp-api-clients-go v1.11.0
 	github.com/ONSdigital/dp-healthcheck v1.0.4
 	github.com/ONSdigital/dp-net v1.0.3
 	github.com/ONSdigital/dp-s3 v1.5.0

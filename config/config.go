@@ -13,6 +13,7 @@ type Config struct {
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
+	ImageAPIURL                string        `envconfig:"IMAGE_API_URL"`
 	S3PrivateBucketName        string        `envconfig:"S3_PRIVATE_BUCKET_NAME"`
 	S3UploadedBucketName       string        `envconfig:"S3_UPLOADED_BUCKET_NAME"`
 	VaultToken                 string        `envconfig:"VAULT_TOKEN"                   json:"-"`
@@ -35,6 +36,7 @@ func Get() (*Config, error) {
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
+		ImageAPIURL:                "http://localhost:24700",
 		S3PrivateBucketName:        "csv-exported",
 		S3UploadedBucketName:       "dp-frontend-florence-file-uploads",
 		VaultPath:                  "secret/shared/psk",

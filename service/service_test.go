@@ -68,6 +68,10 @@ func TestRun(t *testing.T) {
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
+		imageAPImock := &apiMock.ImageAPIClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
+
 		hcMock := &serviceMock.HealthCheckerMock{
 			AddCheckFunc: func(name string, checker healthcheck.Checker) error { return nil },
 			StartFunc:    func(ctx context.Context) {},
@@ -93,6 +97,10 @@ func TestRun(t *testing.T) {
 			return s3UploadedMock, nil
 		}
 
+		funcDoGetImageAPIOk := func(ctx context.Context, cfg *config.Config) api.ImageAPIClienter {
+			return imageAPImock
+		}
+
 		funcDoGetHealthcheckOk := func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 			return hcMock, nil
 		}
@@ -107,6 +115,7 @@ func TestRun(t *testing.T) {
 				DoGetVaultFunc:      funcDoGetVaultErr,
 				DoGetS3PrivateFunc:  funcDoGetS3PrivateOk,
 				DoGetS3UploadedFunc: funcDoGetS3UploadedOk,
+				DoGetImageAPIFunc:   funcDoGetImageAPIOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -117,6 +126,7 @@ func TestRun(t *testing.T) {
 				So(svcList.Vault, ShouldBeFalse)
 				So(svcList.S3Private, ShouldBeFalse)
 				So(svcList.S3Uploaded, ShouldBeFalse)
+				So(svcList.ImageAPI, ShouldBeFalse)
 				So(svcList.HealthCheck, ShouldBeFalse)
 			})
 		})
@@ -127,6 +137,7 @@ func TestRun(t *testing.T) {
 				DoGetVaultFunc:      funcDoGetVaultOk,
 				DoGetS3PrivateFunc:  funcDoGetS3PrivateOk,
 				DoGetS3UploadedFunc: funcDoS3UploadedErr,
+				DoGetImageAPIFunc:   funcDoGetImageAPIOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -137,6 +148,7 @@ func TestRun(t *testing.T) {
 				So(svcList.Vault, ShouldBeTrue)
 				So(svcList.S3Private, ShouldBeTrue)
 				So(svcList.S3Uploaded, ShouldBeFalse)
+				So(svcList.ImageAPI, ShouldBeFalse)
 				So(svcList.HealthCheck, ShouldBeFalse)
 			})
 		})
@@ -147,6 +159,7 @@ func TestRun(t *testing.T) {
 				DoGetVaultFunc:      funcDoGetVaultOk,
 				DoGetS3PrivateFunc:  funcDoS3PrivateErr,
 				DoGetS3UploadedFunc: funcDoGetS3UploadedOk,
+				DoGetImageAPIFunc:   funcDoGetImageAPIOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -157,6 +170,7 @@ func TestRun(t *testing.T) {
 				So(svcList.Vault, ShouldBeTrue)
 				So(svcList.S3Private, ShouldBeFalse)
 				So(svcList.S3Uploaded, ShouldBeFalse)
+				So(svcList.ImageAPI, ShouldBeFalse)
 				So(svcList.HealthCheck, ShouldBeFalse)
 			})
 		})
@@ -168,6 +182,7 @@ func TestRun(t *testing.T) {
 				DoGetHealthCheckFunc: funcDoGetHealthcheckErr,
 				DoGetS3PrivateFunc:   funcDoGetS3PrivateOk,
 				DoGetS3UploadedFunc:  funcDoGetS3UploadedOk,
+				DoGetImageAPIFunc:    funcDoGetImageAPIOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -178,6 +193,7 @@ func TestRun(t *testing.T) {
 				So(svcList.Vault, ShouldBeTrue)
 				So(svcList.S3Private, ShouldBeTrue)
 				So(svcList.S3Uploaded, ShouldBeTrue)
+				So(svcList.ImageAPI, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeFalse)
 			})
 		})
@@ -190,6 +206,7 @@ func TestRun(t *testing.T) {
 				DoGetHealthCheckFunc: funcDoGetHealthcheckOk,
 				DoGetS3PrivateFunc:   funcDoGetS3PrivateOk,
 				DoGetS3UploadedFunc:  funcDoGetS3UploadedOk,
+				DoGetImageAPIFunc:    funcDoGetImageAPIOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -201,14 +218,16 @@ func TestRun(t *testing.T) {
 				So(svcList.Vault, ShouldBeTrue)
 				So(svcList.S3Private, ShouldBeTrue)
 				So(svcList.S3Uploaded, ShouldBeTrue)
+				So(svcList.ImageAPI, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeTrue)
 			})
 
 			Convey("The checkers are registered and the healthcheck and http server started", func() {
-				So(len(hcMock.AddCheckCalls()), ShouldEqual, 3)
+				So(len(hcMock.AddCheckCalls()), ShouldEqual, 4)
 				So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Vault client")
 				So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "S3 private bucket")
 				So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "S3 uploaded bucket")
+				So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Image API client")
 				So(len(initMock.DoGetHTTPServerCalls()), ShouldEqual, 1)
 				So(initMock.DoGetHTTPServerCalls()[0].BindAddr, ShouldEqual, "localhost:24800")
 				So(len(hcMock.StartCalls()), ShouldEqual, 1)
@@ -233,6 +252,7 @@ func TestRun(t *testing.T) {
 				},
 				DoGetS3PrivateFunc:  funcDoGetS3PrivateOk,
 				DoGetS3UploadedFunc: funcDoGetS3UploadedOk,
+				DoGetImageAPIFunc:   funcDoGetImageAPIOk,
 			}
 			svcErrors := make(chan error, 1)
 			svcList := service.NewServiceList(initMock)
@@ -243,10 +263,14 @@ func TestRun(t *testing.T) {
 				So(err.Error(), ShouldResemble, fmt.Sprintf("unable to register checkers: %s", errAddheckFail.Error()))
 				So(svcList.Vault, ShouldBeTrue)
 				So(svcList.HealthCheck, ShouldBeTrue)
-				So(len(hcMockAddFail.AddCheckCalls()), ShouldEqual, 3)
+				So(svcList.S3Private, ShouldBeTrue)
+				So(svcList.S3Uploaded, ShouldBeTrue)
+				So(svcList.ImageAPI, ShouldBeTrue)
+				So(len(hcMockAddFail.AddCheckCalls()), ShouldEqual, 4)
 				So(hcMockAddFail.AddCheckCalls()[0].Name, ShouldResemble, "Vault client")
 				So(hcMockAddFail.AddCheckCalls()[1].Name, ShouldResemble, "S3 private bucket")
 				So(hcMockAddFail.AddCheckCalls()[2].Name, ShouldResemble, "S3 uploaded bucket")
+				So(hcMockAddFail.AddCheckCalls()[3].Name, ShouldResemble, "Image API client")
 			})
 		})
 	})
@@ -267,6 +291,10 @@ func TestClose(t *testing.T) {
 		}
 
 		s3UploadedMock := &apiMock.S3ClienterMock{
+			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+		}
+
+		imageAPIMock := &apiMock.ImageAPIClienterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -298,6 +326,7 @@ func TestClose(t *testing.T) {
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},
+				DoGetImageAPIFunc: func(ctx context.Context, cfg *config.Config) api.ImageAPIClienter { return imageAPIMock },
 			}
 
 			svcErrors := make(chan error, 1)
@@ -328,6 +357,7 @@ func TestClose(t *testing.T) {
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},
+				DoGetImageAPIFunc: func(ctx context.Context, cfg *config.Config) api.ImageAPIClienter { return imageAPIMock },
 			}
 
 			svcErrors := make(chan error, 1)

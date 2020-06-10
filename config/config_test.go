@@ -25,6 +25,7 @@ func TestConfig(t *testing.T) {
 				So(cfg.GracefulShutdownTimeout, ShouldEqual, 5*time.Second)
 				So(cfg.HealthCheckInterval, ShouldEqual, 30*time.Second)
 				So(cfg.HealthCheckCriticalTimeout, ShouldEqual, 90*time.Second)
+				So(cfg.ImageAPIURL, ShouldEqual, "http://localhost:24700")
 				So(cfg.S3PrivateBucketName, ShouldEqual, "csv-exported")
 				So(cfg.S3UploadedBucketName, ShouldEqual, "dp-frontend-florence-file-uploads")
 				So(cfg.VaultAddress, ShouldEqual, "http://localhost:8200")

@@ -56,8 +56,11 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
+	// Get Image API Client
+	imageAPI := serviceList.GetImageAPI(ctx, cfg)
+
 	// Setup the API
-	a := api.Setup(ctx, r, vault, s3Private, s3Uploaded)
+	a := api.Setup(ctx, r, vault, s3Private, s3Uploaded, imageAPI)
 
 	// Get HealthCheck
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -65,7 +68,8 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		log.Event(ctx, "could not instantiate healthcheck", log.FATAL, log.Error(err))
 		return nil, err
 	}
-	if err := registerCheckers(ctx, hc, vault, s3Private, s3Uploaded); err != nil {
+
+	if err := registerCheckers(ctx, hc, vault, s3Private, s3Uploaded, imageAPI); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -142,7 +146,8 @@ func registerCheckers(ctx context.Context,
 	hc HealthChecker,
 	vault api.VaultClienter,
 	s3Private api.S3Clienter,
-	s3Uploaded api.S3Clienter) (err error) {
+	s3Uploaded api.S3Clienter,
+	imageAPI api.ImageAPIClienter) (err error) {
 
 	hasErrors := false
 
@@ -159,6 +164,11 @@ func registerCheckers(ctx context.Context,
 	if err := hc.AddCheck("S3 uploaded bucket", s3Uploaded.Checker); err != nil {
 		hasErrors = true
 		log.Event(ctx, "error adding check for s3Private uploaded bucket", log.ERROR, log.Error(err))
+	}
+
+	if err := hc.AddCheck("Image API client", imageAPI.Checker); err != nil {
+		hasErrors = true
+		log.Event(ctx, "error adding check for Image API", log.ERROR, log.Error(err))
 	}
 
 	if hasErrors {

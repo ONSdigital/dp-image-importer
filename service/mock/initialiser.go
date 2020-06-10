@@ -15,6 +15,7 @@ import (
 var (
 	lockInitialiserMockDoGetHTTPServer  sync.RWMutex
 	lockInitialiserMockDoGetHealthCheck sync.RWMutex
+	lockInitialiserMockDoGetImageAPI    sync.RWMutex
 	lockInitialiserMockDoGetS3Private   sync.RWMutex
 	lockInitialiserMockDoGetS3Uploaded  sync.RWMutex
 	lockInitialiserMockDoGetVault       sync.RWMutex
@@ -35,6 +36,9 @@ var _ service.Initialiser = &InitialiserMock{}
 //             },
 //             DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 // 	               panic("mock out the DoGetHealthCheck method")
+//             },
+//             DoGetImageAPIFunc: func(ctx context.Context, cfg *config.Config) api.ImageAPIClienter {
+// 	               panic("mock out the DoGetImageAPI method")
 //             },
 //             DoGetS3PrivateFunc: func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error) {
 // 	               panic("mock out the DoGetS3Private method")
@@ -57,6 +61,9 @@ type InitialiserMock struct {
 
 	// DoGetHealthCheckFunc mocks the DoGetHealthCheck method.
 	DoGetHealthCheckFunc func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error)
+
+	// DoGetImageAPIFunc mocks the DoGetImageAPI method.
+	DoGetImageAPIFunc func(ctx context.Context, cfg *config.Config) api.ImageAPIClienter
 
 	// DoGetS3PrivateFunc mocks the DoGetS3Private method.
 	DoGetS3PrivateFunc func(ctx context.Context, cfg *config.Config) (api.S3Clienter, error)
@@ -86,6 +93,13 @@ type InitialiserMock struct {
 			GitCommit string
 			// Version is the version argument value.
 			Version string
+		}
+		// DoGetImageAPI holds details about calls to the DoGetImageAPI method.
+		DoGetImageAPI []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// Cfg is the cfg argument value.
+			Cfg *config.Config
 		}
 		// DoGetS3Private holds details about calls to the DoGetS3Private method.
 		DoGetS3Private []struct {
@@ -186,6 +200,41 @@ func (mock *InitialiserMock) DoGetHealthCheckCalls() []struct {
 	lockInitialiserMockDoGetHealthCheck.RLock()
 	calls = mock.calls.DoGetHealthCheck
 	lockInitialiserMockDoGetHealthCheck.RUnlock()
+	return calls
+}
+
+// DoGetImageAPI calls DoGetImageAPIFunc.
+func (mock *InitialiserMock) DoGetImageAPI(ctx context.Context, cfg *config.Config) api.ImageAPIClienter {
+	if mock.DoGetImageAPIFunc == nil {
+		panic("InitialiserMock.DoGetImageAPIFunc: method is nil but Initialiser.DoGetImageAPI was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+		Cfg *config.Config
+	}{
+		Ctx: ctx,
+		Cfg: cfg,
+	}
+	lockInitialiserMockDoGetImageAPI.Lock()
+	mock.calls.DoGetImageAPI = append(mock.calls.DoGetImageAPI, callInfo)
+	lockInitialiserMockDoGetImageAPI.Unlock()
+	return mock.DoGetImageAPIFunc(ctx, cfg)
+}
+
+// DoGetImageAPICalls gets all the calls that were made to DoGetImageAPI.
+// Check the length with:
+//     len(mockedInitialiser.DoGetImageAPICalls())
+func (mock *InitialiserMock) DoGetImageAPICalls() []struct {
+	Ctx context.Context
+	Cfg *config.Config
+} {
+	var calls []struct {
+		Ctx context.Context
+		Cfg *config.Config
+	}
+	lockInitialiserMockDoGetImageAPI.RLock()
+	calls = mock.calls.DoGetImageAPI
+	lockInitialiserMockDoGetImageAPI.RUnlock()
 	return calls
 }
 

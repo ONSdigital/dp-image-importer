@@ -12,14 +12,22 @@ type API struct {
 	vault      VaultClienter
 	s3Private  S3Clienter
 	s3Uploaded S3Clienter
+	imageAPI   ImageAPIClienter
 }
 
-func Setup(ctx context.Context, r *mux.Router, vault VaultClienter, s3Private S3Clienter, s3Uploaded S3Clienter) *API {
+func Setup(ctx context.Context,
+	r *mux.Router,
+	vault VaultClienter,
+	s3Private S3Clienter,
+	s3Uploaded S3Clienter,
+	imageAPI ImageAPIClienter) *API {
+
 	api := &API{
 		Router:     r,
 		vault:      vault,
 		s3Private:  s3Private,
 		s3Uploaded: s3Uploaded,
+		imageAPI:   imageAPI,
 	}
 
 	r.HandleFunc("/hello", HelloHandler()).Methods("GET")

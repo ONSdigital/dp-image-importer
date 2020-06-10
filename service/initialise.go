@@ -7,6 +7,7 @@ import (
 	"github.com/ONSdigital/dp-image-importer/api"
 	"github.com/ONSdigital/dp-image-importer/config"
 
+	"github.com/ONSdigital/dp-api-clients-go/image"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dps3 "github.com/ONSdigital/dp-s3"
@@ -18,6 +19,7 @@ type ExternalServiceList struct {
 	Vault       bool
 	S3Private   bool
 	S3Uploaded  bool
+	ImageAPI    bool
 	HealthCheck bool
 	Init        Initialiser
 }
@@ -28,6 +30,7 @@ func NewServiceList(initialiser Initialiser) *ExternalServiceList {
 		Vault:       false,
 		S3Private:   false,
 		S3Uploaded:  false,
+		ImageAPI:    false,
 		HealthCheck: false,
 		Init:        initialiser,
 	}
@@ -72,6 +75,13 @@ func (e *ExternalServiceList) GetS3Uploaded(ctx context.Context, cfg *config.Con
 	return s3, nil
 }
 
+// GetImageAPI creates an ImageAPI client and sets the ImageAPI flag to true
+func (e *ExternalServiceList) GetImageAPI(ctx context.Context, cfg *config.Config) api.ImageAPIClienter {
+	imageAPI := e.Init.DoGetImageAPI(ctx, cfg)
+	e.ImageAPI = true
+	return imageAPI
+}
+
 // GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
 func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
 	hc, err := e.Init.DoGetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -114,6 +124,11 @@ func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3C
 		return nil, err
 	}
 	return vault, nil
+}
+
+// DoGetImageAPI returns an Image API client
+func (e *Init) DoGetImageAPI(ctx context.Context, cfg *config.Config) api.ImageAPIClienter {
+	return image.NewAPIClient(cfg.ImageAPIURL)
 }
 
 // DoGetHealthCheck creates a healthcheck with versionInfo
