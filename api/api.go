@@ -13,14 +13,18 @@ type API struct {
 	s3Private  S3Clienter
 	s3Uploaded S3Clienter
 	imageAPI   ImageAPIClienter
+	consumer   KafkaConsumer
 }
 
-func Setup(ctx context.Context,
+func Setup(
+	ctx context.Context,
 	r *mux.Router,
 	vault VaultClienter,
 	s3Private S3Clienter,
 	s3Uploaded S3Clienter,
-	imageAPI ImageAPIClienter) *API {
+	imageAPI ImageAPIClienter,
+	consumer KafkaConsumer,
+) *API {
 
 	api := &API{
 		Router:     r,
@@ -28,6 +32,7 @@ func Setup(ctx context.Context,
 		s3Private:  s3Private,
 		s3Uploaded: s3Uploaded,
 		imageAPI:   imageAPI,
+		consumer:   consumer,
 	}
 
 	r.HandleFunc("/hello", HelloHandler()).Methods("GET")

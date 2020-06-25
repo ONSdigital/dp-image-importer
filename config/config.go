@@ -14,6 +14,9 @@ type Config struct {
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
 	ImageAPIURL                string        `envconfig:"IMAGE_API_URL"`
+	Brokers                    []string      `envconfig:"KAFKA_ADDR"                     json:"-"`
+	ImageUploadedGroup         string        `envconfig:"IMAGE_UPLOADED_GROUP"`
+	ImageUploadedTopic         string        `envconfig:"IMAGE_UPLOADED_TOPIC"`
 	S3PrivateBucketName        string        `envconfig:"S3_PRIVATE_BUCKET_NAME"`
 	S3UploadedBucketName       string        `envconfig:"S3_UPLOADED_BUCKET_NAME"`
 	VaultToken                 string        `envconfig:"VAULT_TOKEN"                   json:"-"`
@@ -37,6 +40,9 @@ func Get() (*Config, error) {
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
 		ImageAPIURL:                "http://localhost:24700",
+		Brokers:                    []string{"localhost:9092"},
+		ImageUploadedGroup:         "dp-image-importer",
+		ImageUploadedTopic:         "image-uploaded",
 		S3PrivateBucketName:        "csv-exported",
 		S3UploadedBucketName:       "dp-frontend-florence-file-uploads",
 		VaultPath:                  "secret/shared/psk",

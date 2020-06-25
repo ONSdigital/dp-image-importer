@@ -9,6 +9,7 @@ import (
 
 	"github.com/ONSdigital/dp-api-clients-go/image"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	dpkafka "github.com/ONSdigital/dp-kafka"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dps3 "github.com/ONSdigital/dp-s3"
 	dpvault "github.com/ONSdigital/dp-vault"
@@ -16,23 +17,25 @@ import (
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
 type ExternalServiceList struct {
-	Vault       bool
-	S3Private   bool
-	S3Uploaded  bool
-	ImageAPI    bool
-	HealthCheck bool
-	Init        Initialiser
+	Vault         bool
+	S3Private     bool
+	S3Uploaded    bool
+	ImageAPI      bool
+	HealthCheck   bool
+	KafkaConsumer bool
+	Init          Initialiser
 }
 
 // NewServiceList creates a new service list with the provided initialiser
 func NewServiceList(initialiser Initialiser) *ExternalServiceList {
 	return &ExternalServiceList{
-		Vault:       false,
-		S3Private:   false,
-		S3Uploaded:  false,
-		ImageAPI:    false,
-		HealthCheck: false,
-		Init:        initialiser,
+		Vault:         false,
+		S3Private:     false,
+		S3Uploaded:    false,
+		ImageAPI:      false,
+		HealthCheck:   false,
+		KafkaConsumer: false,
+		Init:          initialiser,
 	}
 }
 
@@ -82,6 +85,16 @@ func (e *ExternalServiceList) GetImageAPI(ctx context.Context, cfg *config.Confi
 	return imageAPI
 }
 
+// GetKafkaConsumer creates a Kafka consumer and sets the consumer flag to true
+func (e *ExternalServiceList) GetKafkaConsumer(ctx context.Context, cfg *config.Config) (api.KafkaConsumer, error) {
+	consumer, err := e.Init.DoGetKafkaConsumer(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	e.KafkaConsumer = true
+	return consumer, nil
+}
+
 // GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
 func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
 	hc, err := e.Init.DoGetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -129,6 +142,25 @@ func (e *Init) DoGetS3Uploaded(ctx context.Context, cfg *config.Config) (api.S3C
 // DoGetImageAPI returns an Image API client
 func (e *Init) DoGetImageAPI(ctx context.Context, cfg *config.Config) api.ImageAPIClienter {
 	return image.NewAPIClient(cfg.ImageAPIURL)
+}
+
+// DoGetKafkaConsumer returns a Kafka Consumer group
+func (e *Init) DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (api.KafkaConsumer, error) {
+	cgChannels := dpkafka.CreateConsumerGroupChannels(true)
+	kafkaConsumer, err := dpkafka.NewConsumerGroup(
+		ctx,
+		cfg.Brokers,
+		cfg.ImageUploadedTopic,
+		cfg.ImageUploadedGroup,
+		dpkafka.OffsetNewest,
+		true,
+		cgChannels,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return kafkaConsumer, nil
 }
 
 // DoGetHealthCheck creates a healthcheck with versionInfo

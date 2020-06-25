@@ -18,6 +18,7 @@ type Service struct {
 	serviceList *ExternalServiceList
 	healthCheck HealthChecker
 	vault       api.VaultClienter
+	consumer    api.KafkaConsumer
 }
 
 // Run the service
@@ -59,8 +60,15 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	// Get Image API Client
 	imageAPI := serviceList.GetImageAPI(ctx, cfg)
 
+	// Get Kafka consumer
+	consumer, err := serviceList.GetKafkaConsumer(ctx, cfg)
+	if err != nil {
+		log.Event(ctx, "failed to initialise kafka consumer", log.FATAL, log.Error(err))
+		return nil, err
+	}
+
 	// Setup the API
-	a := api.Setup(ctx, r, vault, s3Private, s3Uploaded, imageAPI)
+	a := api.Setup(ctx, r, vault, s3Private, s3Uploaded, imageAPI, consumer)
 
 	// Get HealthCheck
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -69,7 +77,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	if err := registerCheckers(ctx, hc, vault, s3Private, s3Uploaded, imageAPI); err != nil {
+	if err := registerCheckers(ctx, hc, vault, s3Private, s3Uploaded, imageAPI, consumer); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -91,6 +99,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		serviceList: serviceList,
 		healthCheck: hc,
 		vault:       vault,
+		consumer:    consumer,
 	}, nil
 }
 
@@ -112,6 +121,13 @@ func (svc *Service) Close(ctx context.Context) error {
 			svc.healthCheck.Stop()
 		}
 
+		// If kafka consumer exists, stop listening to it. (Will close later)
+		if svc.serviceList.KafkaConsumer {
+			log.Event(ctx, "stopping kafka consumer listener", log.INFO)
+			svc.consumer.StopListeningToConsumer(ctx)
+			log.Event(ctx, "stopped kafka consumer listener", log.INFO)
+		}
+
 		// stop any incoming requests before closing any outbound connections
 		if err := svc.server.Shutdown(ctx); err != nil {
 			log.Event(ctx, "failed to shutdown http server", log.Error(err), log.ERROR)
@@ -122,6 +138,13 @@ func (svc *Service) Close(ctx context.Context) error {
 		if err := svc.api.Close(ctx); err != nil {
 			log.Event(ctx, "error closing API", log.Error(err), log.ERROR)
 			hasShutdownError = true
+		}
+
+		// If kafka consumer exists, close it.
+		if svc.serviceList.KafkaConsumer {
+			log.Event(ctx, "closing kafka consumer", log.INFO)
+			svc.consumer.Close(ctx)
+			log.Event(ctx, "closed kafka consumer", log.INFO)
 		}
 
 		if !hasShutdownError {
@@ -147,7 +170,8 @@ func registerCheckers(ctx context.Context,
 	vault api.VaultClienter,
 	s3Private api.S3Clienter,
 	s3Uploaded api.S3Clienter,
-	imageAPI api.ImageAPIClienter) (err error) {
+	imageAPI api.ImageAPIClienter,
+	consumer api.KafkaConsumer) (err error) {
 
 	hasErrors := false
 
@@ -167,6 +191,11 @@ func registerCheckers(ctx context.Context,
 	}
 
 	if err := hc.AddCheck("Image API client", imageAPI.Checker); err != nil {
+		hasErrors = true
+		log.Event(ctx, "error adding check for Image API", log.ERROR, log.Error(err))
+	}
+
+	if err := hc.AddCheck("Kafka consumer", consumer.Checker); err != nil {
 		hasErrors = true
 		log.Event(ctx, "error adding check for Image API", log.ERROR, log.Error(err))
 	}
