@@ -1,0 +1,15 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: onsdigital/dp-concourse-tools-nancy
+    tag: latest
+
+inputs:
+  - name: dp-image-importer
+    path: dp-image-importer
+
+run:
+  path: dp-image-importer/ci/scripts/audit.sh 
