@@ -6,25 +6,19 @@ package mock
 import (
 	"context"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	"github.com/ONSdigital/dp-image-importer/api"
+	"github.com/ONSdigital/dp-image-importer/service"
 	"sync"
 )
 
-var (
-	lockVaultClienterMockChecker sync.RWMutex
-	lockVaultClienterMockRead    sync.RWMutex
-	lockVaultClienterMockWrite   sync.RWMutex
-)
-
-// Ensure, that VaultClienterMock does implement VaultClienter.
+// Ensure, that VaultClienterMock does implement service.VaultClienter.
 // If this is not the case, regenerate this file with moq.
-var _ api.VaultClienter = &VaultClienterMock{}
+var _ service.VaultClienter = &VaultClienterMock{}
 
-// VaultClienterMock is a mock implementation of api.VaultClienter.
+// VaultClienterMock is a mock implementation of service.VaultClienter.
 //
 //     func TestSomethingThatUsesVaultClienter(t *testing.T) {
 //
-//         // make and configure a mocked api.VaultClienter
+//         // make and configure a mocked service.VaultClienter
 //         mockedVaultClienter := &VaultClienterMock{
 //             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 // 	               panic("mock out the Checker method")
@@ -37,7 +31,7 @@ var _ api.VaultClienter = &VaultClienterMock{}
 //             },
 //         }
 //
-//         // use mockedVaultClienter in code that requires api.VaultClienter
+//         // use mockedVaultClienter in code that requires service.VaultClienter
 //         // and then make assertions.
 //
 //     }
@@ -73,6 +67,9 @@ type VaultClienterMock struct {
 			Data map[string]interface{}
 		}
 	}
+	lockChecker sync.RWMutex
+	lockRead    sync.RWMutex
+	lockWrite   sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
@@ -87,9 +84,9 @@ func (mock *VaultClienterMock) Checker(ctx context.Context, state *healthcheck.C
 		Ctx:   ctx,
 		State: state,
 	}
-	lockVaultClienterMockChecker.Lock()
+	mock.lockChecker.Lock()
 	mock.calls.Checker = append(mock.calls.Checker, callInfo)
-	lockVaultClienterMockChecker.Unlock()
+	mock.lockChecker.Unlock()
 	return mock.CheckerFunc(ctx, state)
 }
 
@@ -104,9 +101,9 @@ func (mock *VaultClienterMock) CheckerCalls() []struct {
 		Ctx   context.Context
 		State *healthcheck.CheckState
 	}
-	lockVaultClienterMockChecker.RLock()
+	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
-	lockVaultClienterMockChecker.RUnlock()
+	mock.lockChecker.RUnlock()
 	return calls
 }
 
@@ -120,9 +117,9 @@ func (mock *VaultClienterMock) Read(path string) (map[string]interface{}, error)
 	}{
 		Path: path,
 	}
-	lockVaultClienterMockRead.Lock()
+	mock.lockRead.Lock()
 	mock.calls.Read = append(mock.calls.Read, callInfo)
-	lockVaultClienterMockRead.Unlock()
+	mock.lockRead.Unlock()
 	return mock.ReadFunc(path)
 }
 
@@ -135,9 +132,9 @@ func (mock *VaultClienterMock) ReadCalls() []struct {
 	var calls []struct {
 		Path string
 	}
-	lockVaultClienterMockRead.RLock()
+	mock.lockRead.RLock()
 	calls = mock.calls.Read
-	lockVaultClienterMockRead.RUnlock()
+	mock.lockRead.RUnlock()
 	return calls
 }
 
@@ -153,9 +150,9 @@ func (mock *VaultClienterMock) Write(path string, data map[string]interface{}) e
 		Path: path,
 		Data: data,
 	}
-	lockVaultClienterMockWrite.Lock()
+	mock.lockWrite.Lock()
 	mock.calls.Write = append(mock.calls.Write, callInfo)
-	lockVaultClienterMockWrite.Unlock()
+	mock.lockWrite.Unlock()
 	return mock.WriteFunc(path, data)
 }
 
@@ -170,8 +167,8 @@ func (mock *VaultClienterMock) WriteCalls() []struct {
 		Path string
 		Data map[string]interface{}
 	}
-	lockVaultClienterMockWrite.RLock()
+	mock.lockWrite.RLock()
 	calls = mock.calls.Write
-	lockVaultClienterMockWrite.RUnlock()
+	mock.lockWrite.RUnlock()
 	return calls
 }

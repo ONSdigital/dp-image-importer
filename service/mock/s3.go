@@ -6,36 +6,39 @@ package mock
 import (
 	"context"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	"github.com/ONSdigital/dp-image-importer/api"
+	"github.com/ONSdigital/dp-image-importer/service"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"sync"
 )
 
-var (
-	lockS3ClienterMockChecker sync.RWMutex
-)
-
-// Ensure, that S3ClienterMock does implement S3Clienter.
+// Ensure, that S3ClienterMock does implement service.S3Clienter.
 // If this is not the case, regenerate this file with moq.
-var _ api.S3Clienter = &S3ClienterMock{}
+var _ service.S3Clienter = &S3ClienterMock{}
 
-// S3ClienterMock is a mock implementation of api.S3Clienter.
+// S3ClienterMock is a mock implementation of service.S3Clienter.
 //
 //     func TestSomethingThatUsesS3Clienter(t *testing.T) {
 //
-//         // make and configure a mocked api.S3Clienter
+//         // make and configure a mocked service.S3Clienter
 //         mockedS3Clienter := &S3ClienterMock{
 //             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 // 	               panic("mock out the Checker method")
 //             },
+//             SessionFunc: func() *session.Session {
+// 	               panic("mock out the Session method")
+//             },
 //         }
 //
-//         // use mockedS3Clienter in code that requires api.S3Clienter
+//         // use mockedS3Clienter in code that requires service.S3Clienter
 //         // and then make assertions.
 //
 //     }
 type S3ClienterMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
+
+	// SessionFunc mocks the Session method.
+	SessionFunc func() *session.Session
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -46,7 +49,12 @@ type S3ClienterMock struct {
 			// State is the state argument value.
 			State *healthcheck.CheckState
 		}
+		// Session holds details about calls to the Session method.
+		Session []struct {
+		}
 	}
+	lockChecker sync.RWMutex
+	lockSession sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
@@ -61,9 +69,9 @@ func (mock *S3ClienterMock) Checker(ctx context.Context, state *healthcheck.Chec
 		Ctx:   ctx,
 		State: state,
 	}
-	lockS3ClienterMockChecker.Lock()
+	mock.lockChecker.Lock()
 	mock.calls.Checker = append(mock.calls.Checker, callInfo)
-	lockS3ClienterMockChecker.Unlock()
+	mock.lockChecker.Unlock()
 	return mock.CheckerFunc(ctx, state)
 }
 
@@ -78,8 +86,34 @@ func (mock *S3ClienterMock) CheckerCalls() []struct {
 		Ctx   context.Context
 		State *healthcheck.CheckState
 	}
-	lockS3ClienterMockChecker.RLock()
+	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
-	lockS3ClienterMockChecker.RUnlock()
+	mock.lockChecker.RUnlock()
+	return calls
+}
+
+// Session calls SessionFunc.
+func (mock *S3ClienterMock) Session() *session.Session {
+	if mock.SessionFunc == nil {
+		panic("S3ClienterMock.SessionFunc: method is nil but S3Clienter.Session was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockSession.Lock()
+	mock.calls.Session = append(mock.calls.Session, callInfo)
+	mock.lockSession.Unlock()
+	return mock.SessionFunc()
+}
+
+// SessionCalls gets all the calls that were made to Session.
+// Check the length with:
+//     len(mockedS3Clienter.SessionCalls())
+func (mock *S3ClienterMock) SessionCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockSession.RLock()
+	calls = mock.calls.Session
+	mock.lockSession.RUnlock()
 	return calls
 }

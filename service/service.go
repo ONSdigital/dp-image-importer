@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-image-importer/api"
 	"github.com/ONSdigital/dp-image-importer/config"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
@@ -14,11 +13,10 @@ type Service struct {
 	config      *config.Config
 	server      HTTPServer
 	router      *mux.Router
-	api         *api.API
 	serviceList *ExternalServiceList
 	healthCheck HealthChecker
-	vault       api.VaultClienter
-	consumer    api.KafkaConsumer
+	vault       VaultClienter
+	consumer    KafkaConsumer
 }
 
 // Run the service
@@ -43,17 +41,10 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	// Get S3Private client
-	s3Private, err := serviceList.GetS3Private(ctx, cfg)
+	// Get S3 Clients
+	s3Uploaded, s3Private, err := serviceList.GetS3Clients(cfg)
 	if err != nil {
-		log.Event(ctx, "failed to initialise S3 client for private bucket", log.FATAL, log.Error(err))
-		return nil, err
-	}
-
-	// Get S3Uploaded client
-	s3Uploaded, err := serviceList.GetS3Uploaded(ctx, cfg)
-	if err != nil {
-		log.Event(ctx, "failed to initialise S3 client for uploaded bucket", log.FATAL, log.Error(err))
+		log.Event(ctx, "could not instantiate S3 clients", log.FATAL, log.Error(err))
 		return nil, err
 	}
 
@@ -67,8 +58,6 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	// Setup the API
-	a := api.Setup(ctx, r, vault, s3Private, s3Uploaded, imageAPI, consumer)
 
 	// Get HealthCheck
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -95,7 +84,6 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		config:      cfg,
 		server:      s,
 		router:      r,
-		api:         a,
 		serviceList: serviceList,
 		healthCheck: hc,
 		vault:       vault,
@@ -134,12 +122,6 @@ func (svc *Service) Close(ctx context.Context) error {
 			hasShutdownError = true
 		}
 
-		// close API
-		if err := svc.api.Close(ctx); err != nil {
-			log.Event(ctx, "error closing API", log.Error(err), log.ERROR)
-			hasShutdownError = true
-		}
-
 		// If kafka consumer exists, close it.
 		if svc.serviceList.KafkaConsumer {
 			log.Event(ctx, "closing kafka consumer", log.INFO)
@@ -167,11 +149,11 @@ func (svc *Service) Close(ctx context.Context) error {
 
 func registerCheckers(ctx context.Context,
 	hc HealthChecker,
-	vault api.VaultClienter,
-	s3Private api.S3Clienter,
-	s3Uploaded api.S3Clienter,
-	imageAPI api.ImageAPIClienter,
-	consumer api.KafkaConsumer) (err error) {
+	vault VaultClienter,
+	s3Private S3Clienter,
+	s3Uploaded S3Clienter,
+	imageAPI ImageAPIClienter,
+	consumer KafkaConsumer) (err error) {
 
 	hasErrors := false
 

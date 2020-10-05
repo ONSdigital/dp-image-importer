@@ -6,30 +6,26 @@ package mock
 import (
 	"context"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
-	"github.com/ONSdigital/dp-image-importer/api"
+	"github.com/ONSdigital/dp-image-importer/service"
 	"sync"
 )
 
-var (
-	lockImageAPIClienterMockChecker sync.RWMutex
-)
-
-// Ensure, that ImageAPIClienterMock does implement ImageAPIClienter.
+// Ensure, that ImageAPIClienterMock does implement service.ImageAPIClienter.
 // If this is not the case, regenerate this file with moq.
-var _ api.ImageAPIClienter = &ImageAPIClienterMock{}
+var _ service.ImageAPIClienter = &ImageAPIClienterMock{}
 
-// ImageAPIClienterMock is a mock implementation of api.ImageAPIClienter.
+// ImageAPIClienterMock is a mock implementation of service.ImageAPIClienter.
 //
 //     func TestSomethingThatUsesImageAPIClienter(t *testing.T) {
 //
-//         // make and configure a mocked api.ImageAPIClienter
+//         // make and configure a mocked service.ImageAPIClienter
 //         mockedImageAPIClienter := &ImageAPIClienterMock{
 //             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 // 	               panic("mock out the Checker method")
 //             },
 //         }
 //
-//         // use mockedImageAPIClienter in code that requires api.ImageAPIClienter
+//         // use mockedImageAPIClienter in code that requires service.ImageAPIClienter
 //         // and then make assertions.
 //
 //     }
@@ -47,6 +43,7 @@ type ImageAPIClienterMock struct {
 			State *healthcheck.CheckState
 		}
 	}
+	lockChecker sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
@@ -61,9 +58,9 @@ func (mock *ImageAPIClienterMock) Checker(ctx context.Context, state *healthchec
 		Ctx:   ctx,
 		State: state,
 	}
-	lockImageAPIClienterMockChecker.Lock()
+	mock.lockChecker.Lock()
 	mock.calls.Checker = append(mock.calls.Checker, callInfo)
-	lockImageAPIClienterMockChecker.Unlock()
+	mock.lockChecker.Unlock()
 	return mock.CheckerFunc(ctx, state)
 }
 
@@ -78,8 +75,8 @@ func (mock *ImageAPIClienterMock) CheckerCalls() []struct {
 		Ctx   context.Context
 		State *healthcheck.CheckState
 	}
-	lockImageAPIClienterMockChecker.RLock()
+	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
-	lockImageAPIClienterMockChecker.RUnlock()
+	mock.lockChecker.RUnlock()
 	return calls
 }
