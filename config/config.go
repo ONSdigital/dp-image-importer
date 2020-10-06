@@ -9,6 +9,7 @@ import (
 // Config represents service configuration for dp-image-importer
 type Config struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
+	ServiceAuthToken           string        `envconfig:"SERVICE_AUTH_TOKEN"             json:"-"`
 	AwsRegion                  string        `envconfig:"AWS_REGION"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
@@ -19,7 +20,7 @@ type Config struct {
 	ImageUploadedTopic         string        `envconfig:"IMAGE_UPLOADED_TOPIC"`
 	S3PrivateBucketName        string        `envconfig:"S3_PRIVATE_BUCKET_NAME"`
 	S3UploadedBucketName       string        `envconfig:"S3_UPLOADED_BUCKET_NAME"`
-	VaultToken                 string        `envconfig:"VAULT_TOKEN"                   json:"-"`
+	VaultToken                 string        `envconfig:"VAULT_TOKEN"                    json:"-"`
 	VaultAddress               string        `envconfig:"VAULT_ADDR"`
 	VaultPath                  string        `envconfig:"VAULT_PATH"`
 }
@@ -35,6 +36,7 @@ func Get() (*Config, error) {
 
 	cfg := &Config{
 		BindAddr:                   "localhost:24800",
+		ServiceAuthToken:           "4424A9F2-B903-40F4-85F1-240107D1AFAF",
 		AwsRegion:                  "eu-west-1",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,

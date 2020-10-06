@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/ONSdigital/dp-image-importer/event"
 	"net/http"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
@@ -14,18 +15,16 @@ import (
 //go:generate moq -out mock/server.go -pkg mock . HTTPServer
 //go:generate moq -out mock/healthCheck.go -pkg mock . HealthChecker
 
-//go:generate moq -out mock/vault.go -pkg mock . VaultClienter
-//go:generate moq -out mock/s3.go -pkg mock . S3Clienter
 //go:generate moq -out mock/image.go -pkg mock . ImageAPIClienter
 //go:generate moq -out mock/kafka.go -pkg mock . KafkaConsumer
 
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
-	DoGetVault(ctx context.Context, cfg *config.Config) (VaultClienter, error)
+	DoGetVault(ctx context.Context, cfg *config.Config) (event.VaultClient, error)
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
-	DoGetS3Client(awsRegion, bucketName string, encryptionEnabled bool) (S3Clienter, error)
-	DoGetS3ClientWithSession(bucketName string, encryptionEnabled bool, s *session.Session) S3Clienter
+	DoGetS3Client(awsRegion, bucketName string, encryptionEnabled bool) (event.S3Writer, error)
+	DoGetS3ClientWithSession(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader
 	DoGetImageAPI(ctx context.Context, cfg *config.Config) ImageAPIClienter
 	DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (KafkaConsumer, error)
 }
@@ -44,18 +43,6 @@ type HealthChecker interface {
 	AddCheck(name string, checker healthcheck.Checker) (err error)
 }
 
-type VaultClienter interface {
-	Read(path string) (map[string]interface{}, error)
-	Write(path string, data map[string]interface{}) error
-	Checker(ctx context.Context, state *healthcheck.CheckState) error
-}
-
-// S3Clienter defines the required methods from S3 client
-type S3Clienter interface {
-	Checker(ctx context.Context, state *healthcheck.CheckState) error
-	Session() *session.Session
-}
-
 type ImageAPIClienter interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 }
@@ -66,4 +53,10 @@ type KafkaConsumer interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 	Channels() *kafka.ConsumerGroupChannels
 	Release()
+}
+
+// EventConsumer defines the required methods from event Consumer
+type EventConsumer interface {
+	Consume(ctx context.Context, messageConsumer event.MessageConsumer, handler event.Handler)
+	Close(ctx context.Context) (err error)
 }

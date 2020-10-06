@@ -6,6 +6,7 @@ package mock
 import (
 	"context"
 	"github.com/ONSdigital/dp-image-importer/config"
+	"github.com/ONSdigital/dp-image-importer/event"
 	"github.com/ONSdigital/dp-image-importer/service"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"net/http"
@@ -34,13 +35,13 @@ var _ service.Initialiser = &InitialiserMock{}
 //             DoGetKafkaConsumerFunc: func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error) {
 // 	               panic("mock out the DoGetKafkaConsumer method")
 //             },
-//             DoGetS3ClientFunc: func(awsRegion string, bucketName string, encryptionEnabled bool) (service.S3Clienter, error) {
+//             DoGetS3ClientFunc: func(awsRegion string, bucketName string, encryptionEnabled bool) (event.S3Writer, error) {
 // 	               panic("mock out the DoGetS3Client method")
 //             },
-//             DoGetS3ClientWithSessionFunc: func(bucketName string, encryptionEnabled bool, s *session.Session) service.S3Clienter {
+//             DoGetS3ClientWithSessionFunc: func(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader {
 // 	               panic("mock out the DoGetS3ClientWithSession method")
 //             },
-//             DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (service.VaultClienter, error) {
+//             DoGetVaultFunc: func(ctx context.Context, cfg *config.Config) (event.VaultClient, error) {
 // 	               panic("mock out the DoGetVault method")
 //             },
 //         }
@@ -63,13 +64,13 @@ type InitialiserMock struct {
 	DoGetKafkaConsumerFunc func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error)
 
 	// DoGetS3ClientFunc mocks the DoGetS3Client method.
-	DoGetS3ClientFunc func(awsRegion string, bucketName string, encryptionEnabled bool) (service.S3Clienter, error)
+	DoGetS3ClientFunc func(awsRegion string, bucketName string, encryptionEnabled bool) (event.S3Writer, error)
 
 	// DoGetS3ClientWithSessionFunc mocks the DoGetS3ClientWithSession method.
-	DoGetS3ClientWithSessionFunc func(bucketName string, encryptionEnabled bool, s *session.Session) service.S3Clienter
+	DoGetS3ClientWithSessionFunc func(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader
 
 	// DoGetVaultFunc mocks the DoGetVault method.
-	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (service.VaultClienter, error)
+	DoGetVaultFunc func(ctx context.Context, cfg *config.Config) (event.VaultClient, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -289,7 +290,7 @@ func (mock *InitialiserMock) DoGetKafkaConsumerCalls() []struct {
 }
 
 // DoGetS3Client calls DoGetS3ClientFunc.
-func (mock *InitialiserMock) DoGetS3Client(awsRegion string, bucketName string, encryptionEnabled bool) (service.S3Clienter, error) {
+func (mock *InitialiserMock) DoGetS3Client(awsRegion string, bucketName string, encryptionEnabled bool) (event.S3Writer, error) {
 	if mock.DoGetS3ClientFunc == nil {
 		panic("InitialiserMock.DoGetS3ClientFunc: method is nil but Initialiser.DoGetS3Client was just called")
 	}
@@ -328,7 +329,7 @@ func (mock *InitialiserMock) DoGetS3ClientCalls() []struct {
 }
 
 // DoGetS3ClientWithSession calls DoGetS3ClientWithSessionFunc.
-func (mock *InitialiserMock) DoGetS3ClientWithSession(bucketName string, encryptionEnabled bool, s *session.Session) service.S3Clienter {
+func (mock *InitialiserMock) DoGetS3ClientWithSession(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader {
 	if mock.DoGetS3ClientWithSessionFunc == nil {
 		panic("InitialiserMock.DoGetS3ClientWithSessionFunc: method is nil but Initialiser.DoGetS3ClientWithSession was just called")
 	}
@@ -367,7 +368,7 @@ func (mock *InitialiserMock) DoGetS3ClientWithSessionCalls() []struct {
 }
 
 // DoGetVault calls DoGetVaultFunc.
-func (mock *InitialiserMock) DoGetVault(ctx context.Context, cfg *config.Config) (service.VaultClienter, error) {
+func (mock *InitialiserMock) DoGetVault(ctx context.Context, cfg *config.Config) (event.VaultClient, error) {
 	if mock.DoGetVaultFunc == nil {
 		panic("InitialiserMock.DoGetVaultFunc: method is nil but Initialiser.DoGetVault was just called")
 	}

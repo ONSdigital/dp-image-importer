@@ -7,6 +7,7 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/image"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-image-importer/config"
+	"github.com/ONSdigital/dp-image-importer/event"
 	dpkafka "github.com/ONSdigital/dp-kafka"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dps3 "github.com/ONSdigital/dp-s3"
@@ -48,7 +49,7 @@ func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler
 }
 
 // GetVault creates a Vault client and sets the Vault flag to true
-func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) (VaultClienter, error) {
+func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) (event.VaultClient, error) {
 	vault, err := e.Init.DoGetVault(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func (e *ExternalServiceList) GetVault(ctx context.Context, cfg *config.Config) 
 }
 
 // GetS3Clients returns S3 clients uploaded and private. They share the same AWS session.
-func (e *ExternalServiceList) GetS3Clients(cfg *config.Config) (s3Uploaded S3Clienter, s3Private S3Clienter, err error) {
+func (e *ExternalServiceList) GetS3Clients(cfg *config.Config) (s3Uploaded event.S3Reader, s3Private event.S3Writer, err error) {
 	s3Private, err = e.Init.DoGetS3Client(cfg.AwsRegion, cfg.S3PrivateBucketName, true)
 	if err != nil {
 		return nil, nil, err
@@ -104,7 +105,7 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 }
 
 // DoGetVault returns a VaultClient
-func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (VaultClienter, error) {
+func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (event.VaultClient, error) {
 	vault, err := dpvault.CreateClient(cfg.VaultToken, cfg.VaultAddress, 3)
 	if err != nil {
 		return nil, err
@@ -113,13 +114,13 @@ func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (VaultCliente
 }
 
 // DoGetS3Client creates a new S3Client for the provided AWS region and bucket name.
-func (e *Init) DoGetS3Client(awsRegion, bucketName string, encryptionEnabled bool) (S3Clienter, error) {
+func (e *Init) DoGetS3Client(awsRegion, bucketName string, encryptionEnabled bool) (event.S3Writer, error) {
 	return dps3.NewClient(awsRegion, bucketName, encryptionEnabled)
 }
 
 // DoGetS3ClientWithSession creates a new S3Clienter (extension of S3Client with Upload operations)
 // for the provided bucket name, using an existing AWS session
-func (e *Init) DoGetS3ClientWithSession(bucketName string, encryptionEnabled bool, s *session.Session) S3Clienter {
+func (e *Init) DoGetS3ClientWithSession(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader {
 	return dps3.NewUploaderWithSession(bucketName, encryptionEnabled, s)
 }
 

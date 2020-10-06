@@ -3,16 +3,18 @@ package service_test
 import (
 	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"net/http"
 	"sync"
 	"testing"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-image-importer/config"
+	"github.com/ONSdigital/dp-image-importer/event"
+	eventMock "github.com/ONSdigital/dp-image-importer/event/mock"
 	"github.com/ONSdigital/dp-image-importer/service"
-	"github.com/ONSdigital/dp-image-importer/service/mock"
 	serviceMock "github.com/ONSdigital/dp-image-importer/service/mock"
+	kafka "github.com/ONSdigital/dp-kafka"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -31,11 +33,11 @@ var (
 	errHealthcheck   = errors.New("healthCheck error")
 )
 
-var funcDoGetVaultErr = func(ctx context.Context, cfg *config.Config) (service.VaultClienter, error) {
+var funcDoGetVaultErr = func(ctx context.Context, cfg *config.Config) (event.VaultClient, error) {
 	return nil, errVault
 }
 
-var funcDoS3PrivateErr = func(awsRegion, bucketName string, encryptionEnabled bool) (service.S3Clienter, error) {
+var funcDoS3PrivateErr = func(awsRegion, bucketName string, encryptionEnabled bool) (event.S3Writer, error) {
 	return nil, errS3Private
 }
 
@@ -55,16 +57,16 @@ func TestRun(t *testing.T) {
 
 	Convey("Having a set of mocked dependencies", t, func() {
 
-		vaultMock := &serviceMock.VaultClienterMock{
+		vaultMock := &eventMock.VaultClientMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		s3PrivateMock := &serviceMock.S3ClienterMock{
+		s3PrivateMock := &eventMock.S3WriterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 			SessionFunc: func() *session.Session { return nil },
 		}
 
-		s3UploadedMock := &serviceMock.S3ClienterMock{
+		s3UploadedMock := &eventMock.S3ReaderMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -73,7 +75,8 @@ func TestRun(t *testing.T) {
 		}
 
 		consumerMock := &serviceMock.KafkaConsumerMock{
-			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+			CheckerFunc:  func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+			ChannelsFunc: func() *kafka.ConsumerGroupChannels { return &kafka.ConsumerGroupChannels{} },
 		}
 
 		hcMock := &serviceMock.HealthCheckerMock{
@@ -89,15 +92,15 @@ func TestRun(t *testing.T) {
 			},
 		}
 
-		funcDoGetVaultOk := func(ctx context.Context, cfg *config.Config) (service.VaultClienter, error) {
+		funcDoGetVaultOk := func(ctx context.Context, cfg *config.Config) (event.VaultClient, error) {
 			return vaultMock, nil
 		}
 
-		funcDoGetS3PrivateOk := func(awsRegion, bucketName string, encryptionEnabled bool) (service.S3Clienter, error) {
+		funcDoGetS3PrivateOk := func(awsRegion, bucketName string, encryptionEnabled bool) (event.S3Writer, error) {
 			return s3PrivateMock, nil
 		}
 
-		funcDoGetS3UploadedOk := func(bucketName string, encryptionEnabled bool, s *session.Session) service.S3Clienter {
+		funcDoGetS3UploadedOk := func(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader {
 			return s3UploadedMock
 		}
 
@@ -304,16 +307,16 @@ func TestClose(t *testing.T) {
 
 		hcStopped := false
 
-		vaultMock := &serviceMock.VaultClienterMock{
+		vaultMock := &eventMock.VaultClientMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		s3PrivateMock := &serviceMock.S3ClienterMock{
+		s3PrivateMock := &eventMock.S3WriterMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 			SessionFunc: func() *session.Session { return nil },
 		}
 
-		s3UploadedMock := &serviceMock.S3ClienterMock{
+		s3UploadedMock := &eventMock.S3ReaderMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -325,6 +328,7 @@ func TestClose(t *testing.T) {
 			StopListeningToConsumerFunc: func(ctx context.Context) error { return nil },
 			CloseFunc:                   func(ctx context.Context) error { return nil },
 			CheckerFunc:                 func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
+			ChannelsFunc:                func() *kafka.ConsumerGroupChannels { return &kafka.ConsumerGroupChannels{} },
 		}
 
 		// healthcheck Stop does not depend on any other service being closed/stopped
@@ -335,7 +339,7 @@ func TestClose(t *testing.T) {
 		}
 
 		// server Shutdown will fail if healthcheck is not stopped
-		serverMock := &mock.HTTPServerMock{
+		serverMock := &serviceMock.HTTPServerMock{
 			ListenAndServeFunc: func() error { return nil },
 			ShutdownFunc: func(ctx context.Context) error {
 				if !hcStopped {
@@ -347,13 +351,13 @@ func TestClose(t *testing.T) {
 
 		Convey("Closing the service results in all the dependencies being closed in the expected order", func() {
 
-			initMock := &mock.InitialiserMock{
+			initMock := &serviceMock.InitialiserMock{
 				DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer { return serverMock },
-				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (service.VaultClienter, error) { return vaultMock, nil },
-				DoGetS3ClientFunc: func(awsRegion, bucketName string, encryptionEnabled bool) (service.S3Clienter, error) {
+				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (event.VaultClient, error) { return vaultMock, nil },
+				DoGetS3ClientFunc: func(awsRegion, bucketName string, encryptionEnabled bool) (event.S3Writer, error) {
 					return s3PrivateMock, nil
 				},
-				DoGetS3ClientWithSessionFunc: func(bucketName string, encryptionEnabled bool, s *session.Session) service.S3Clienter {
+				DoGetS3ClientWithSessionFunc: func(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader {
 					return s3UploadedMock
 				},
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
@@ -378,20 +382,20 @@ func TestClose(t *testing.T) {
 
 		Convey("If services fail to stop, the Close operation tries to close all dependencies and returns an error", func() {
 
-			failingserverMock := &mock.HTTPServerMock{
+			failingserverMock := &serviceMock.HTTPServerMock{
 				ListenAndServeFunc: func() error { return nil },
 				ShutdownFunc: func(ctx context.Context) error {
 					return errors.New("Failed to stop http server")
 				},
 			}
 
-			initMock := &mock.InitialiserMock{
+			initMock := &serviceMock.InitialiserMock{
 				DoGetHTTPServerFunc: func(bindAddr string, router http.Handler) service.HTTPServer { return failingserverMock },
-				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (service.VaultClienter, error) { return vaultMock, nil },
-				DoGetS3ClientFunc: func(awsRegion, bucketName string, encryptionEnabled bool) (service.S3Clienter, error) {
+				DoGetVaultFunc:      func(ctx context.Context, cfg *config.Config) (event.VaultClient, error) { return vaultMock, nil },
+				DoGetS3ClientFunc: func(awsRegion, bucketName string, encryptionEnabled bool) (event.S3Writer, error) {
 					return s3PrivateMock, nil
 				},
-				DoGetS3ClientWithSessionFunc: func(bucketName string, encryptionEnabled bool, s *session.Session) service.S3Clienter {
+				DoGetS3ClientWithSessionFunc: func(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader {
 					return s3UploadedMock
 				},
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
