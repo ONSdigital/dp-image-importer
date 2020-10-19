@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-image-importer/event"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"io"
 	"sync"
 )
 
@@ -28,11 +28,11 @@ var _ event.S3Reader = &S3ReaderMock{}
 //             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 // 	               panic("mock out the Checker method")
 //             },
+//             GetWithPSKFunc: func(key string, psk []byte) (io.ReadCloser, *int64, error) {
+// 	               panic("mock out the GetWithPSK method")
+//             },
 //             SessionFunc: func() *session.Session {
 // 	               panic("mock out the Session method")
-//             },
-//             UploadFunc: func(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
-// 	               panic("mock out the Upload method")
 //             },
 //         }
 //
@@ -47,11 +47,11 @@ type S3ReaderMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
+	// GetWithPSKFunc mocks the GetWithPSK method.
+	GetWithPSKFunc func(key string, psk []byte) (io.ReadCloser, *int64, error)
+
 	// SessionFunc mocks the Session method.
 	SessionFunc func() *session.Session
-
-	// UploadFunc mocks the Upload method.
-	UploadFunc func(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -65,21 +65,21 @@ type S3ReaderMock struct {
 			// State is the state argument value.
 			State *healthcheck.CheckState
 		}
+		// GetWithPSK holds details about calls to the GetWithPSK method.
+		GetWithPSK []struct {
+			// Key is the key argument value.
+			Key string
+			// Psk is the psk argument value.
+			Psk []byte
+		}
 		// Session holds details about calls to the Session method.
 		Session []struct {
-		}
-		// Upload holds details about calls to the Upload method.
-		Upload []struct {
-			// Input is the input argument value.
-			Input *s3manager.UploadInput
-			// Options is the options argument value.
-			Options []func(*s3manager.Uploader)
 		}
 	}
 	lockBucketName sync.RWMutex
 	lockChecker    sync.RWMutex
+	lockGetWithPSK sync.RWMutex
 	lockSession    sync.RWMutex
-	lockUpload     sync.RWMutex
 }
 
 // BucketName calls BucketNameFunc.
@@ -143,6 +143,41 @@ func (mock *S3ReaderMock) CheckerCalls() []struct {
 	return calls
 }
 
+// GetWithPSK calls GetWithPSKFunc.
+func (mock *S3ReaderMock) GetWithPSK(key string, psk []byte) (io.ReadCloser, *int64, error) {
+	if mock.GetWithPSKFunc == nil {
+		panic("S3ReaderMock.GetWithPSKFunc: method is nil but S3Reader.GetWithPSK was just called")
+	}
+	callInfo := struct {
+		Key string
+		Psk []byte
+	}{
+		Key: key,
+		Psk: psk,
+	}
+	mock.lockGetWithPSK.Lock()
+	mock.calls.GetWithPSK = append(mock.calls.GetWithPSK, callInfo)
+	mock.lockGetWithPSK.Unlock()
+	return mock.GetWithPSKFunc(key, psk)
+}
+
+// GetWithPSKCalls gets all the calls that were made to GetWithPSK.
+// Check the length with:
+//     len(mockedS3Reader.GetWithPSKCalls())
+func (mock *S3ReaderMock) GetWithPSKCalls() []struct {
+	Key string
+	Psk []byte
+} {
+	var calls []struct {
+		Key string
+		Psk []byte
+	}
+	mock.lockGetWithPSK.RLock()
+	calls = mock.calls.GetWithPSK
+	mock.lockGetWithPSK.RUnlock()
+	return calls
+}
+
 // Session calls SessionFunc.
 func (mock *S3ReaderMock) Session() *session.Session {
 	if mock.SessionFunc == nil {
@@ -166,40 +201,5 @@ func (mock *S3ReaderMock) SessionCalls() []struct {
 	mock.lockSession.RLock()
 	calls = mock.calls.Session
 	mock.lockSession.RUnlock()
-	return calls
-}
-
-// Upload calls UploadFunc.
-func (mock *S3ReaderMock) Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
-	if mock.UploadFunc == nil {
-		panic("S3ReaderMock.UploadFunc: method is nil but S3Reader.Upload was just called")
-	}
-	callInfo := struct {
-		Input   *s3manager.UploadInput
-		Options []func(*s3manager.Uploader)
-	}{
-		Input:   input,
-		Options: options,
-	}
-	mock.lockUpload.Lock()
-	mock.calls.Upload = append(mock.calls.Upload, callInfo)
-	mock.lockUpload.Unlock()
-	return mock.UploadFunc(input, options...)
-}
-
-// UploadCalls gets all the calls that were made to Upload.
-// Check the length with:
-//     len(mockedS3Reader.UploadCalls())
-func (mock *S3ReaderMock) UploadCalls() []struct {
-	Input   *s3manager.UploadInput
-	Options []func(*s3manager.Uploader)
-} {
-	var calls []struct {
-		Input   *s3manager.UploadInput
-		Options []func(*s3manager.Uploader)
-	}
-	mock.lockUpload.RLock()
-	calls = mock.calls.Upload
-	mock.lockUpload.RUnlock()
 	return calls
 }

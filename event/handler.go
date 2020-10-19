@@ -37,7 +37,7 @@ type S3Writer interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 	Session() *session.Session
 	BucketName() string
-	GetWithPSK(key string, psk []byte) (io.ReadCloser, *int64, error)
+	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
 }
 
 // S3Reader defines the required methods from dp-s3 to read data to an AWS S3 Bucket
@@ -45,7 +45,7 @@ type S3Reader interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 	Session() *session.Session
 	BucketName() string
-	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
+	GetWithPSK(key string, psk []byte) (io.ReadCloser, *int64, error)
 }
 
 // VaultClient defines the required methods from dp-vault client

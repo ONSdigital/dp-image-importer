@@ -175,9 +175,11 @@ func registerCheckers(ctx context.Context,
 
 	hasErrors := false
 
-	if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
-		hasErrors = true
-		log.Event(ctx, "error adding check for vault", log.ERROR, log.Error(err))
+	if vault != nil {
+		if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
+			hasErrors = true
+			log.Event(ctx, "error adding check for vault", log.ERROR, log.Error(err))
+		}
 	}
 
 	if err := hc.AddCheck("S3 private bucket", s3Private.Checker); err != nil {

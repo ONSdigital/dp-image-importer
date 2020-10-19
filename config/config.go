@@ -10,6 +10,7 @@ import (
 type Config struct {
 	BindAddr                   string        `envconfig:"BIND_ADDR"`
 	ServiceAuthToken           string        `envconfig:"SERVICE_AUTH_TOKEN"             json:"-"`
+	EncryptionDisabled         bool          `envconfig:"ENCRYPTION_DISABLED"`
 	AwsRegion                  string        `envconfig:"AWS_REGION"`
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
@@ -37,6 +38,7 @@ func Get() (*Config, error) {
 	cfg := &Config{
 		BindAddr:                   "localhost:24800",
 		ServiceAuthToken:           "4424A9F2-B903-40F4-85F1-240107D1AFAF",
+		EncryptionDisabled:         false,
 		AwsRegion:                  "eu-west-1",
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
