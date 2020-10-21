@@ -26,6 +26,9 @@ var _ event.VaultClient = &VaultClientMock{}
 //             ReadKeyFunc: func(path string, key string) (string, error) {
 // 	               panic("mock out the ReadKey method")
 //             },
+//             WriteKeyFunc: func(path string, key string, value string) error {
+// 	               panic("mock out the WriteKey method")
+//             },
 //         }
 //
 //         // use mockedVaultClient in code that requires event.VaultClient
@@ -38,6 +41,9 @@ type VaultClientMock struct {
 
 	// ReadKeyFunc mocks the ReadKey method.
 	ReadKeyFunc func(path string, key string) (string, error)
+
+	// WriteKeyFunc mocks the WriteKey method.
+	WriteKeyFunc func(path string, key string, value string) error
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -55,9 +61,19 @@ type VaultClientMock struct {
 			// Key is the key argument value.
 			Key string
 		}
+		// WriteKey holds details about calls to the WriteKey method.
+		WriteKey []struct {
+			// Path is the path argument value.
+			Path string
+			// Key is the key argument value.
+			Key string
+			// Value is the value argument value.
+			Value string
+		}
 	}
-	lockChecker sync.RWMutex
-	lockReadKey sync.RWMutex
+	lockChecker  sync.RWMutex
+	lockReadKey  sync.RWMutex
+	lockWriteKey sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
@@ -127,5 +143,44 @@ func (mock *VaultClientMock) ReadKeyCalls() []struct {
 	mock.lockReadKey.RLock()
 	calls = mock.calls.ReadKey
 	mock.lockReadKey.RUnlock()
+	return calls
+}
+
+// WriteKey calls WriteKeyFunc.
+func (mock *VaultClientMock) WriteKey(path string, key string, value string) error {
+	if mock.WriteKeyFunc == nil {
+		panic("VaultClientMock.WriteKeyFunc: method is nil but VaultClient.WriteKey was just called")
+	}
+	callInfo := struct {
+		Path  string
+		Key   string
+		Value string
+	}{
+		Path:  path,
+		Key:   key,
+		Value: value,
+	}
+	mock.lockWriteKey.Lock()
+	mock.calls.WriteKey = append(mock.calls.WriteKey, callInfo)
+	mock.lockWriteKey.Unlock()
+	return mock.WriteKeyFunc(path, key, value)
+}
+
+// WriteKeyCalls gets all the calls that were made to WriteKey.
+// Check the length with:
+//     len(mockedVaultClient.WriteKeyCalls())
+func (mock *VaultClientMock) WriteKeyCalls() []struct {
+	Path  string
+	Key   string
+	Value string
+} {
+	var calls []struct {
+		Path  string
+		Key   string
+		Value string
+	}
+	mock.lockWriteKey.RLock()
+	calls = mock.calls.WriteKey
+	mock.lockWriteKey.RUnlock()
 	return calls
 }

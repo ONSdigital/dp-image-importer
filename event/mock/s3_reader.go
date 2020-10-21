@@ -28,6 +28,9 @@ var _ event.S3Reader = &S3ReaderMock{}
 //             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 // 	               panic("mock out the Checker method")
 //             },
+//             GetFunc: func(key string) (io.ReadCloser, *int64, error) {
+// 	               panic("mock out the Get method")
+//             },
 //             GetWithPSKFunc: func(key string, psk []byte) (io.ReadCloser, *int64, error) {
 // 	               panic("mock out the GetWithPSK method")
 //             },
@@ -47,6 +50,9 @@ type S3ReaderMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
+	// GetFunc mocks the Get method.
+	GetFunc func(key string) (io.ReadCloser, *int64, error)
+
 	// GetWithPSKFunc mocks the GetWithPSK method.
 	GetWithPSKFunc func(key string, psk []byte) (io.ReadCloser, *int64, error)
 
@@ -65,6 +71,11 @@ type S3ReaderMock struct {
 			// State is the state argument value.
 			State *healthcheck.CheckState
 		}
+		// Get holds details about calls to the Get method.
+		Get []struct {
+			// Key is the key argument value.
+			Key string
+		}
 		// GetWithPSK holds details about calls to the GetWithPSK method.
 		GetWithPSK []struct {
 			// Key is the key argument value.
@@ -78,6 +89,7 @@ type S3ReaderMock struct {
 	}
 	lockBucketName sync.RWMutex
 	lockChecker    sync.RWMutex
+	lockGet        sync.RWMutex
 	lockGetWithPSK sync.RWMutex
 	lockSession    sync.RWMutex
 }
@@ -140,6 +152,37 @@ func (mock *S3ReaderMock) CheckerCalls() []struct {
 	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
 	mock.lockChecker.RUnlock()
+	return calls
+}
+
+// Get calls GetFunc.
+func (mock *S3ReaderMock) Get(key string) (io.ReadCloser, *int64, error) {
+	if mock.GetFunc == nil {
+		panic("S3ReaderMock.GetFunc: method is nil but S3Reader.Get was just called")
+	}
+	callInfo := struct {
+		Key string
+	}{
+		Key: key,
+	}
+	mock.lockGet.Lock()
+	mock.calls.Get = append(mock.calls.Get, callInfo)
+	mock.lockGet.Unlock()
+	return mock.GetFunc(key)
+}
+
+// GetCalls gets all the calls that were made to Get.
+// Check the length with:
+//     len(mockedS3Reader.GetCalls())
+func (mock *S3ReaderMock) GetCalls() []struct {
+	Key string
+} {
+	var calls []struct {
+		Key string
+	}
+	mock.lockGet.RLock()
+	calls = mock.calls.Get
+	mock.lockGet.RUnlock()
 	return calls
 }
 
