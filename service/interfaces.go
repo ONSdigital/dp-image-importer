@@ -15,7 +15,6 @@ import (
 //go:generate moq -out mock/server.go -pkg mock . HTTPServer
 //go:generate moq -out mock/healthCheck.go -pkg mock . HealthChecker
 
-//go:generate moq -out mock/image.go -pkg mock . ImageAPIClienter
 //go:generate moq -out mock/kafka.go -pkg mock . KafkaConsumer
 
 // Initialiser defines the methods to initialise external services
@@ -25,7 +24,7 @@ type Initialiser interface {
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
 	DoGetS3Client(awsRegion, bucketName string, encryptionEnabled bool) (event.S3Writer, error)
 	DoGetS3ClientWithSession(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader
-	DoGetImageAPI(ctx context.Context, cfg *config.Config) ImageAPIClienter
+	DoGetImageAPI(ctx context.Context, cfg *config.Config) event.ImageAPIClient
 	DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (KafkaConsumer, error)
 }
 
@@ -41,10 +40,6 @@ type HealthChecker interface {
 	Start(ctx context.Context)
 	Stop()
 	AddCheck(name string, checker healthcheck.Checker) (err error)
-}
-
-type ImageAPIClienter interface {
-	Checker(ctx context.Context, state *healthcheck.CheckState) error
 }
 
 type KafkaConsumer interface {

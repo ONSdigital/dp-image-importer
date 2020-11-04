@@ -70,7 +70,7 @@ func TestRun(t *testing.T) {
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		imageAPIMock := &serviceMock.ImageAPIClienterMock{
+		imageAPIMock := &eventMock.ImageAPIClientMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -104,7 +104,7 @@ func TestRun(t *testing.T) {
 			return s3UploadedMock
 		}
 
-		funcDoGetImageAPIOk := func(ctx context.Context, cfg *config.Config) service.ImageAPIClienter {
+		funcDoGetImageAPIOk := func(ctx context.Context, cfg *config.Config) event.ImageAPIClient {
 			return imageAPIMock
 		}
 
@@ -320,7 +320,7 @@ func TestClose(t *testing.T) {
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		imageAPIMock := &serviceMock.ImageAPIClienterMock{
+		imageAPIMock := &eventMock.ImageAPIClientMock{
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
@@ -363,7 +363,7 @@ func TestClose(t *testing.T) {
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},
-				DoGetImageAPIFunc:      func(ctx context.Context, cfg *config.Config) service.ImageAPIClienter { return imageAPIMock },
+				DoGetImageAPIFunc:      func(ctx context.Context, cfg *config.Config) event.ImageAPIClient { return imageAPIMock },
 				DoGetKafkaConsumerFunc: func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error) { return consumerMock, nil },
 			}
 
@@ -401,7 +401,7 @@ func TestClose(t *testing.T) {
 				DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 					return hcMock, nil
 				},
-				DoGetImageAPIFunc:      func(ctx context.Context, cfg *config.Config) service.ImageAPIClienter { return imageAPIMock },
+				DoGetImageAPIFunc:      func(ctx context.Context, cfg *config.Config) event.ImageAPIClient { return imageAPIMock },
 				DoGetKafkaConsumerFunc: func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error) { return consumerMock, nil },
 			}
 

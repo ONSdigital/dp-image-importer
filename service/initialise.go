@@ -71,7 +71,7 @@ func (e *ExternalServiceList) GetS3Clients(cfg *config.Config) (s3Uploaded event
 }
 
 // GetImageAPI creates an ImageAPI client and sets the ImageAPI flag to true
-func (e *ExternalServiceList) GetImageAPI(ctx context.Context, cfg *config.Config) ImageAPIClienter {
+func (e *ExternalServiceList) GetImageAPI(ctx context.Context, cfg *config.Config) event.ImageAPIClient {
 	imageAPI := e.Init.DoGetImageAPI(ctx, cfg)
 	e.ImageAPI = true
 	return imageAPI
@@ -128,7 +128,7 @@ func (e *Init) DoGetS3ClientWithSession(bucketName string, encryptionEnabled boo
 }
 
 // DoGetImageAPI returns an Image API client
-func (e *Init) DoGetImageAPI(ctx context.Context, cfg *config.Config) ImageAPIClienter {
+func (e *Init) DoGetImageAPI(ctx context.Context, cfg *config.Config) event.ImageAPIClient {
 	return image.NewAPIClient(cfg.ImageAPIURL)
 }
 

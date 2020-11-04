@@ -63,11 +63,13 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	// Event Handler for Kafka Consumer with the created S3 Clients and Vault
 	eventConsumer := event.NewConsumer()
 	eventConsumer.Consume(ctx, consumer, &event.ImageUploadedHandler{
-		AuthToken: cfg.ServiceAuthToken,
-		S3Private: s3Private,
-		S3Upload:  s3Uploaded,
-		VaultCli:  vault,
-		VaultPath: cfg.VaultPath,
+		AuthToken:          cfg.ServiceAuthToken,
+		S3Private:          s3Private,
+		S3Upload:           s3Uploaded,
+		VaultCli:           vault,
+		VaultPath:          cfg.VaultPath,
+		ImageCli:           imageAPI,
+		DownloadServiceURL: cfg.DownloadServiceURL,
 	})
 
 	// Get HealthCheck
@@ -170,7 +172,7 @@ func registerCheckers(ctx context.Context,
 	vault event.VaultClient,
 	s3Private event.S3Writer,
 	s3Uploaded event.S3Reader,
-	imageAPI ImageAPIClienter,
+	imageAPI event.ImageAPIClient,
 	consumer KafkaConsumer) (err error) {
 
 	hasErrors := false

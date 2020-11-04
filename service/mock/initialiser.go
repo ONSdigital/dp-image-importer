@@ -29,7 +29,7 @@ var _ service.Initialiser = &InitialiserMock{}
 //             DoGetHealthCheckFunc: func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error) {
 // 	               panic("mock out the DoGetHealthCheck method")
 //             },
-//             DoGetImageAPIFunc: func(ctx context.Context, cfg *config.Config) service.ImageAPIClienter {
+//             DoGetImageAPIFunc: func(ctx context.Context, cfg *config.Config) event.ImageAPIClient {
 // 	               panic("mock out the DoGetImageAPI method")
 //             },
 //             DoGetKafkaConsumerFunc: func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error) {
@@ -58,7 +58,7 @@ type InitialiserMock struct {
 	DoGetHealthCheckFunc func(cfg *config.Config, buildTime string, gitCommit string, version string) (service.HealthChecker, error)
 
 	// DoGetImageAPIFunc mocks the DoGetImageAPI method.
-	DoGetImageAPIFunc func(ctx context.Context, cfg *config.Config) service.ImageAPIClienter
+	DoGetImageAPIFunc func(ctx context.Context, cfg *config.Config) event.ImageAPIClient
 
 	// DoGetKafkaConsumerFunc mocks the DoGetKafkaConsumer method.
 	DoGetKafkaConsumerFunc func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error)
@@ -220,7 +220,7 @@ func (mock *InitialiserMock) DoGetHealthCheckCalls() []struct {
 }
 
 // DoGetImageAPI calls DoGetImageAPIFunc.
-func (mock *InitialiserMock) DoGetImageAPI(ctx context.Context, cfg *config.Config) service.ImageAPIClienter {
+func (mock *InitialiserMock) DoGetImageAPI(ctx context.Context, cfg *config.Config) event.ImageAPIClient {
 	if mock.DoGetImageAPIFunc == nil {
 		panic("InitialiserMock.DoGetImageAPIFunc: method is nil but Initialiser.DoGetImageAPI was just called")
 	}
