@@ -11,7 +11,6 @@ require (
 	github.com/ONSdigital/dp-vault v1.1.1
 	github.com/ONSdigital/go-ns v0.0.0-20200511161740-afc39066ee62
 	github.com/ONSdigital/log.go v1.0.1
-	github.com/Shopify/sarama v1.27.0 // indirect
 	github.com/aws/aws-sdk-go v1.29.2
 	github.com/gorilla/mux v1.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
