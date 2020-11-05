@@ -35,6 +35,10 @@ debug:
 test:
 	go test -race -cover ./...
 
+.PHONY: produce
+produce:
+	HUMAN_LOG=1 go run cmd/producer/main.go
+
 .PHONY: convey
 convey:
 	goconvey ./...

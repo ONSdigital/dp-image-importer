@@ -117,11 +117,11 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 		ImportStarted: &startTime,
 	})
 	if err != nil {
-		log.Event(ctx, "error putting image variant to API", log.ERROR, log.Error(err), logData)
+		log.Event(ctx, "error posting image variant to API", log.ERROR, log.Error(err), logData)
 		return
 	}
 	logData["imageDownload"] = &imageDownload
-	log.Event(ctx, "put image download", log.INFO, logData)
+	log.Event(ctx, "posted image download", log.INFO, logData)
 
 	// Variant S3 key 'images/{id}/{variantId}'
 	variantPath := path.Join("images", event.ImageID, variantId)
@@ -153,7 +153,7 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 		fileName = path.Base(uploadPath)
 	}
 	imageDownload.Href = path.Join(h.DownloadServiceURL, variantPath, fileName)
-	_, err = h.ImageCli.PutDownloadVariant(ctx, "", h.AuthToken, "", event.ImageID, imageDownload.Id, imageDownload)
+	imageDownload, err = h.ImageCli.PutDownloadVariant(ctx, "", h.AuthToken, "", event.ImageID, imageDownload.Id, imageDownload)
 	if err != nil {
 
 		log.Event(ctx, "error putting image variant to API", log.ERROR, log.Error(err), logData)
