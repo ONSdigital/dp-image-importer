@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"path"
 	"time"
@@ -152,10 +153,9 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 	if fileName == "" {
 		fileName = path.Base(uploadPath)
 	}
-	imageDownload.Href = path.Join(h.DownloadServiceURL, variantPath, fileName)
+	imageDownload.Href = fmt.Sprintf("%s/%s/%s", h.DownloadServiceURL, variantPath, fileName)
 	imageDownload, err = h.ImageCli.PutDownloadVariant(ctx, "", h.AuthToken, "", event.ImageID, imageDownload.Id, imageDownload)
 	if err != nil {
-
 		log.Event(ctx, "error putting image variant to API", log.ERROR, log.Error(err), logData)
 		return
 	}

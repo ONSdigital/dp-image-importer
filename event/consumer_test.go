@@ -19,8 +19,9 @@ var testCtx = context.Background()
 var errHandler = errors.New("Handler Error")
 
 var testEvent = event.ImageUploaded{
-	ImageID: "123",
-	Path:    "images/ID1/original/public.png",
+	ImageID:  "123",
+	Filename: "Filename.png",
+	Path:     "1234-uploadpng",
 }
 
 // kafkaStubConsumer mock which exposes Channels function returning empty channels
