@@ -77,7 +77,8 @@ type ImageAPIClient interface {
 }
 
 // Handle takes a single event. It reads the PSK from Vault, uses it to decrypt the encrypted file
-// from the private S3 bucket, and writes it to the public static bucket without using the vault psk for encryption.
+// from the uploaded S3 bucket, and writes it to the private bucket with a new vault psk for encryption.
+// It also calls the API to create a new download variant and to update it after the variant has been imported.
 func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded) (err error) {
 	uploadBucket := h.S3Upload.BucketName()
 	privateBucket := h.S3Private.BucketName()
