@@ -16,7 +16,7 @@ const (
 func main() {
 
 	ctx := context.Background()
-	log.Namespace = "dp-dataset-exporter"
+	log.Namespace = "dp-image-importer-producer"
 
 	cfg, err := config.Get()
 	if err != nil {
