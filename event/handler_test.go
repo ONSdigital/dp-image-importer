@@ -87,6 +87,12 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 			},
 		}
 		mockImageAPI := &mock.ImageAPIClientMock{
+			GetImageFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string) (image.Image, error) {
+				return image.Image{}, nil
+			},
+			PutImageFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.Image) (image.Image, error) {
+				return data, nil
+			},
 			PostDownloadVariantFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.NewImageDownload) (image.ImageDownload, error) {
 				return testCreatedDownload, nil
 			},
@@ -117,7 +123,7 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("An image download variant is posted to the image API", func() {
-				So(len(mockImageAPI.PostDownloadVariantCalls()), ShouldEqual, 1)
+				So(mockImageAPI.PostDownloadVariantCalls(), ShouldHaveLength, 1)
 				So(mockImageAPI.PostDownloadVariantCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
 				So(mockImageAPI.PostDownloadVariantCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
 				newImageData := mockImageAPI.PostDownloadVariantCalls()[0].Data
@@ -127,25 +133,25 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 			})
 
 			Convey("Encryption key is read from Vault with the expected path", func() {
-				So(len(mockVault.ReadKeyCalls()), ShouldEqual, 1)
+				So(mockVault.ReadKeyCalls(), ShouldHaveLength, 1)
 				So(mockVault.ReadKeyCalls()[0].Path, ShouldEqual, testVaultUploadFilePath)
 				So(mockVault.ReadKeyCalls()[0].Key, ShouldEqual, "key")
 			})
 
 			Convey("The file is obtained from the private bucket and decrypted with the psk obtained from Vault", func() {
-				So(len(mockS3Upload.GetWithPSKCalls()), ShouldEqual, 1)
+				So(mockS3Upload.GetWithPSKCalls(), ShouldHaveLength, 1)
 				So(mockS3Upload.GetWithPSKCalls()[0].Key, ShouldEqual, testEvent.Path)
 				So(mockS3Upload.GetWithPSKCalls()[0].Psk, ShouldResemble, psk)
 			})
 
 			Convey("Encryption key is written to Vault with the expected path", func() {
-				So(len(mockVault.WriteKeyCalls()), ShouldEqual, 1)
+				So(mockVault.WriteKeyCalls(), ShouldHaveLength, 1)
 				So(mockVault.WriteKeyCalls()[0].Path, ShouldEqual, testVaultPrivateFilePath)
 				So(mockVault.WriteKeyCalls()[0].Key, ShouldEqual, "key")
 			})
 
 			Convey("The file is uploaded to the private bucket", func() {
-				So(len(mockS3Private.UploadWithPSKCalls()), ShouldEqual, 1)
+				So(mockS3Private.UploadWithPSKCalls(), ShouldHaveLength, 1)
 				So(mockS3Private.UploadWithPSKCalls()[0].Psk, ShouldHaveLength, 16)
 				So(*mockS3Private.UploadWithPSKCalls()[0].Input, ShouldResemble, s3manager.UploadInput{
 					Body:   testFileContent,
@@ -155,7 +161,7 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 			})
 
 			Convey("The image download variant is put to the image API with a state of imported", func() {
-				So(len(mockImageAPI.PutDownloadVariantCalls()), ShouldEqual, 1)
+				So(mockImageAPI.PutDownloadVariantCalls(), ShouldHaveLength, 1)
 				So(mockImageAPI.PutDownloadVariantCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
 				So(mockImageAPI.PutDownloadVariantCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
 				newImageData := mockImageAPI.PutDownloadVariantCalls()[0].Data
@@ -187,7 +193,7 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("The image download variant is put to the image API with a state of imported", func() {
-				So(len(mockImageAPI.PostDownloadVariantCalls()), ShouldEqual, 1)
+				So(mockImageAPI.PostDownloadVariantCalls(), ShouldHaveLength, 1)
 				So(mockImageAPI.PostDownloadVariantCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
 				So(mockImageAPI.PostDownloadVariantCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
 				newImageData := mockImageAPI.PutDownloadVariantCalls()[0].Data
@@ -218,7 +224,7 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			Convey("An image download variant is posted to the image API", func() {
-				So(len(mockImageAPI.PostDownloadVariantCalls()), ShouldEqual, 1)
+				So(mockImageAPI.PostDownloadVariantCalls(), ShouldHaveLength, 1)
 				So(mockImageAPI.PostDownloadVariantCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
 				So(mockImageAPI.PostDownloadVariantCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
 				newImageData := mockImageAPI.PostDownloadVariantCalls()[0].Data
@@ -228,12 +234,12 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 			})
 
 			Convey("The file is obtained from the private bucket", func() {
-				So(len(mockS3Upload.GetCalls()), ShouldEqual, 1)
+				So(mockS3Upload.GetCalls(), ShouldHaveLength, 1)
 				So(mockS3Upload.GetCalls()[0].Key, ShouldEqual, testEvent.Path)
 			})
 
 			Convey("The file is uploaded to the private bucket", func() {
-				So(len(mockS3Private.UploadCalls()), ShouldEqual, 1)
+				So(mockS3Private.UploadCalls(), ShouldHaveLength, 1)
 				So(*mockS3Private.UploadCalls()[0].Input, ShouldResemble, s3manager.UploadInput{
 					Body:   testFileContent,
 					Bucket: &testPrivateBucket,
@@ -242,7 +248,7 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 			})
 
 			Convey("The image download variant is put to the image API with a state of imported", func() {
-				So(len(mockImageAPI.PutDownloadVariantCalls()), ShouldEqual, 1)
+				So(mockImageAPI.PutDownloadVariantCalls(), ShouldHaveLength, 1)
 				So(mockImageAPI.PutDownloadVariantCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
 				So(mockImageAPI.PutDownloadVariantCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
 				newImageData := mockImageAPI.PutDownloadVariantCalls()[0].Data
@@ -266,12 +272,24 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 				S3Private: mockS3Private,
 				VaultCli:  mockVaultFail,
 				VaultPath: testVaultPath,
+				ImageCli:  mockImageAPI,
 			}
 			err := eventHandler.Handle(testCtx, &testEvent)
 
 			Convey("Vault ReadKey is called and the error is returned", func() {
 				So(err, ShouldResemble, errVault)
-				So(len(mockVaultFail.ReadKeyCalls()), ShouldEqual, 1)
+				So(mockVaultFail.ReadKeyCalls(), ShouldHaveLength, 1)
+			})
+			Convey("The Image is retrieved from the API and updated with a state of failed_import", func() {
+				So(mockImageAPI.GetImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.GetImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.GetImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				So(mockImageAPI.PutImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.PutImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.PutImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				updatedImage := mockImageAPI.PutImageCalls()[0].Data
+				So(updatedImage.State, ShouldEqual, "failed_import")
+				So(updatedImage.Error, ShouldEqual, "error reading key from vault")
 			})
 		})
 
@@ -294,7 +312,19 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 
 			Convey("Vault ReadKey is called and the decoding error is returned", func() {
 				So(err, ShouldNotBeNil)
-				So(len(mockVaultFail.ReadKeyCalls()), ShouldEqual, 1)
+				So(mockVaultFail.ReadKeyCalls(), ShouldHaveLength, 1)
+			})
+
+			Convey("The Image is retrieved from the API and updated with a state of failed_import", func() {
+				So(mockImageAPI.GetImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.GetImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.GetImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				So(mockImageAPI.PutImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.PutImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.PutImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				updatedImage := mockImageAPI.PutImageCalls()[0].Data
+				So(updatedImage.State, ShouldEqual, "failed_import")
+				So(updatedImage.Error, ShouldEqual, "error reading key from vault")
 			})
 		})
 
@@ -315,8 +345,20 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 
 			Convey("S3Private is called and the same error is returned", func() {
 				So(err, ShouldResemble, errS3Uploaded)
-				So(len(mockVault.ReadKeyCalls()), ShouldEqual, 1)
-				So(len(mockS3Upload.GetWithPSKCalls()), ShouldEqual, 1)
+				So(mockVault.ReadKeyCalls(), ShouldHaveLength, 1)
+				So(mockS3Upload.GetWithPSKCalls(), ShouldHaveLength, 1)
+			})
+
+			Convey("The Image is retrieved from the API and updated with a state of failed_import", func() {
+				So(mockImageAPI.GetImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.GetImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.GetImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				So(mockImageAPI.PutImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.PutImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.PutImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				updatedImage := mockImageAPI.PutImageCalls()[0].Data
+				So(updatedImage.State, ShouldEqual, "failed_import")
+				So(updatedImage.Error, ShouldEqual, "error getting s3 object reader")
 			})
 		})
 
@@ -337,7 +379,19 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 
 			Convey("S3Private is called and the same error is returned", func() {
 				So(err, ShouldResemble, errS3Uploaded)
-				So(len(mockS3Upload.GetCalls()), ShouldEqual, 1)
+				So(mockS3Upload.GetCalls(), ShouldHaveLength, 1)
+			})
+
+			Convey("The Image is retrieved from the API and updated with a state of failed_import", func() {
+				So(mockImageAPI.GetImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.GetImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.GetImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				So(mockImageAPI.PutImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.PutImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.PutImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				updatedImage := mockImageAPI.PutImageCalls()[0].Data
+				So(updatedImage.State, ShouldEqual, "failed_import")
+				So(updatedImage.Error, ShouldEqual, "error getting s3 object reader")
 			})
 		})
 
@@ -346,6 +400,12 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 				return testFileContent, &testSize, nil
 			}
 			mockImageAPIFail := &mock.ImageAPIClientMock{
+				GetImageFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string) (image.Image, error) {
+					return image.Image{}, nil
+				},
+				PutImageFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.Image) (image.Image, error) {
+					return data, nil
+				},
 				PostDownloadVariantFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.NewImageDownload) (image.ImageDownload, error) {
 					return image.ImageDownload{}, errImageAPI
 				},
@@ -363,7 +423,19 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 
 			Convey("ImageAPI.PostDownloadVariant is called and the error is returned", func() {
 				So(err, ShouldNotBeNil)
-				So(len(mockImageAPIFail.PostDownloadVariantCalls()), ShouldEqual, 1)
+				So(mockImageAPIFail.PostDownloadVariantCalls(), ShouldHaveLength, 1)
+			})
+
+			Convey("The Image is retrieved from the API and updated with a state of failed_import", func() {
+				So(mockImageAPIFail.GetImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPIFail.GetImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPIFail.GetImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				So(mockImageAPIFail.PutImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPIFail.PutImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPIFail.PutImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				updatedImage := mockImageAPIFail.PutImageCalls()[0].Data
+				So(updatedImage.State, ShouldEqual, "failed_import")
+				So(updatedImage.Error, ShouldEqual, "error posting image variant to API")
 			})
 		})
 
@@ -390,7 +462,20 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 
 			Convey("Vault ReadKey is called and the decoding error is returned", func() {
 				So(err, ShouldNotBeNil)
-				So(len(mockVaultFail.WriteKeyCalls()), ShouldEqual, 1)
+				So(mockVaultFail.WriteKeyCalls(), ShouldHaveLength, 1)
+			})
+
+			Convey("The Image Download Variant is updated with a state of failed_import", func() {
+				So(mockImageAPI.PutDownloadVariantCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.PutDownloadVariantCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.PutDownloadVariantCalls()[0].Variant, ShouldEqual, "original")
+				So(mockImageAPI.PutDownloadVariantCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				newImageData := mockImageAPI.PutDownloadVariantCalls()[0].Data
+				So(newImageData, ShouldNotBeNil)
+				So(newImageData.Id, ShouldEqual, "original")
+				So(newImageData.State, ShouldEqual, "failed_import")
+				So(newImageData.Error, ShouldEqual, "failed to write vault key")
+				So(newImageData.ImportCompleted, ShouldBeNil)
 			})
 		})
 
@@ -414,9 +499,22 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 
 			Convey("S3Private is called and the same error is returned", func() {
 				So(err, ShouldResemble, errS3Private)
-				So(len(mockVault.ReadKeyCalls()), ShouldEqual, 1)
-				So(len(mockS3Upload.GetWithPSKCalls()), ShouldEqual, 1)
-				So(len(mockS3Private.BucketNameCalls()), ShouldEqual, 2)
+				So(mockVault.ReadKeyCalls(), ShouldHaveLength, 1)
+				So(mockS3Upload.GetWithPSKCalls(), ShouldHaveLength, 1)
+				So(mockS3Private.BucketNameCalls(), ShouldHaveLength, 2)
+			})
+
+			Convey("The Image Download Variant is updated with a state of failed_import", func() {
+				So(mockImageAPI.PutDownloadVariantCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.PutDownloadVariantCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.PutDownloadVariantCalls()[0].Variant, ShouldEqual, "original")
+				So(mockImageAPI.PutDownloadVariantCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				newImageData := mockImageAPI.PutDownloadVariantCalls()[0].Data
+				So(newImageData, ShouldNotBeNil)
+				So(newImageData.Id, ShouldEqual, "original")
+				So(newImageData.State, ShouldEqual, "failed_import")
+				So(newImageData.Error, ShouldEqual, "failed to upload variant to s3")
+				So(newImageData.ImportCompleted, ShouldBeNil)
 			})
 		})
 
@@ -440,8 +538,21 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 
 			Convey("S3Private is called and the same error is returned", func() {
 				So(err, ShouldResemble, errS3Private)
-				So(len(mockS3Upload.GetCalls()), ShouldEqual, 1)
-				So(len(mockS3Private.BucketNameCalls()), ShouldEqual, 2)
+				So(mockS3Upload.GetCalls(), ShouldHaveLength, 1)
+				So(mockS3Private.BucketNameCalls(), ShouldHaveLength, 2)
+			})
+
+			Convey("The Image Download Variant is updated with a state of failed_import", func() {
+				So(mockImageAPI.PutDownloadVariantCalls(), ShouldHaveLength, 1)
+				So(mockImageAPI.PutDownloadVariantCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPI.PutDownloadVariantCalls()[0].Variant, ShouldEqual, "original")
+				So(mockImageAPI.PutDownloadVariantCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				newImageData := mockImageAPI.PutDownloadVariantCalls()[0].Data
+				So(newImageData, ShouldNotBeNil)
+				So(newImageData.Id, ShouldEqual, "original")
+				So(newImageData.State, ShouldEqual, "failed_import")
+				So(newImageData.Error, ShouldEqual, "failed to upload variant to s3")
+				So(newImageData.ImportCompleted, ShouldBeNil)
 			})
 		})
 
@@ -453,6 +564,12 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 				return &s3manager.UploadOutput{}, nil
 			}
 			mockImageAPIFail := &mock.ImageAPIClientMock{
+				GetImageFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string) (image.Image, error) {
+					return image.Image{}, nil
+				},
+				PutImageFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.Image) (image.Image, error) {
+					return data, nil
+				},
 				PostDownloadVariantFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.NewImageDownload) (image.ImageDownload, error) {
 					return testCreatedDownload, nil
 				},
@@ -473,7 +590,19 @@ func TestImageUploadedHandler_Handle(t *testing.T) {
 
 			Convey("ImageAPI.PutDownloadVariant is called and the error is returned", func() {
 				So(err, ShouldNotBeNil)
-				So(len(mockImageAPIFail.PutDownloadVariantCalls()), ShouldEqual, 1)
+				So(mockImageAPIFail.PutDownloadVariantCalls(), ShouldHaveLength, 1)
+			})
+
+			Convey("The Image is retrieved from the API and updated with a state of failed_import", func() {
+				So(mockImageAPIFail.GetImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPIFail.GetImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPIFail.GetImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				So(mockImageAPIFail.PutImageCalls(), ShouldHaveLength, 1)
+				So(mockImageAPIFail.PutImageCalls()[0].ImageID, ShouldEqual, testEvent.ImageID)
+				So(mockImageAPIFail.PutImageCalls()[0].ServiceAuthToken, ShouldResemble, testAuthToken)
+				updatedImage := mockImageAPIFail.PutImageCalls()[0].Data
+				So(updatedImage.State, ShouldEqual, "failed_import")
+				So(updatedImage.Error, ShouldEqual, "error putting updated image variant to API")
 			})
 		})
 

@@ -244,17 +244,17 @@ func TestRun(t *testing.T) {
 			})
 
 			Convey("The checkers are registered and the healthcheck and http server started", func() {
-				So(len(hcMock.AddCheckCalls()), ShouldEqual, 5)
+				So(hcMock.AddCheckCalls(), ShouldHaveLength, 5)
 				So(hcMock.AddCheckCalls()[0].Name, ShouldResemble, "Vault client")
 				So(hcMock.AddCheckCalls()[1].Name, ShouldResemble, "S3 private bucket")
 				So(hcMock.AddCheckCalls()[2].Name, ShouldResemble, "S3 uploaded bucket")
 				So(hcMock.AddCheckCalls()[3].Name, ShouldResemble, "Image API client")
 				So(hcMock.AddCheckCalls()[4].Name, ShouldResemble, "Kafka consumer")
-				So(len(initMock.DoGetHTTPServerCalls()), ShouldEqual, 1)
+				So(initMock.DoGetHTTPServerCalls(), ShouldHaveLength, 1)
 				So(initMock.DoGetHTTPServerCalls()[0].BindAddr, ShouldEqual, "localhost:24800")
-				So(len(hcMock.StartCalls()), ShouldEqual, 1)
+				So(hcMock.StartCalls(), ShouldHaveLength, 1)
 				serverWg.Wait() // Wait for HTTP server go-routine to finish
-				So(len(serverMock.ListenAndServeCalls()), ShouldEqual, 1)
+				So(serverMock.ListenAndServeCalls(), ShouldHaveLength, 1)
 			})
 		})
 
@@ -290,7 +290,7 @@ func TestRun(t *testing.T) {
 				So(svcList.S3Uploaded, ShouldBeTrue)
 				So(svcList.ImageAPI, ShouldBeTrue)
 				So(svcList.KafkaConsumer, ShouldBeTrue)
-				So(len(hcMockAddFail.AddCheckCalls()), ShouldEqual, 5)
+				So(hcMockAddFail.AddCheckCalls(), ShouldHaveLength, 5)
 				So(hcMockAddFail.AddCheckCalls()[0].Name, ShouldResemble, "Vault client")
 				So(hcMockAddFail.AddCheckCalls()[1].Name, ShouldResemble, "S3 private bucket")
 				So(hcMockAddFail.AddCheckCalls()[2].Name, ShouldResemble, "S3 uploaded bucket")
@@ -374,10 +374,10 @@ func TestClose(t *testing.T) {
 
 			err = svc.Close(context.Background())
 			So(err, ShouldBeNil)
-			So(len(consumerMock.StopListeningToConsumerCalls()), ShouldEqual, 1)
-			So(len(hcMock.StopCalls()), ShouldEqual, 1)
-			So(len(consumerMock.CloseCalls()), ShouldEqual, 1)
-			So(len(serverMock.ShutdownCalls()), ShouldEqual, 1)
+			So(consumerMock.StopListeningToConsumerCalls(), ShouldHaveLength, 1)
+			So(hcMock.StopCalls(), ShouldHaveLength, 1)
+			So(consumerMock.CloseCalls(), ShouldHaveLength, 1)
+			So(serverMock.ShutdownCalls(), ShouldHaveLength, 1)
 		})
 
 		Convey("If services fail to stop, the Close operation tries to close all dependencies and returns an error", func() {
@@ -412,8 +412,8 @@ func TestClose(t *testing.T) {
 
 			err = svc.Close(context.Background())
 			So(err, ShouldNotBeNil)
-			So(len(hcMock.StopCalls()), ShouldEqual, 1)
-			So(len(failingserverMock.ShutdownCalls()), ShouldEqual, 1)
+			So(hcMock.StopCalls(), ShouldHaveLength, 1)
+			So(failingserverMock.ShutdownCalls(), ShouldHaveLength, 1)
 		})
 	})
 }

@@ -24,11 +24,17 @@ var _ event.ImageAPIClient = &ImageAPIClientMock{}
 //             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
 // 	               panic("mock out the Checker method")
 //             },
+//             GetImageFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string) (image.Image, error) {
+// 	               panic("mock out the GetImage method")
+//             },
 //             PostDownloadVariantFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.NewImageDownload) (image.ImageDownload, error) {
 // 	               panic("mock out the PostDownloadVariant method")
 //             },
 //             PutDownloadVariantFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, variant string, data image.ImageDownload) (image.ImageDownload, error) {
 // 	               panic("mock out the PutDownloadVariant method")
+//             },
+//             PutImageFunc: func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.Image) (image.Image, error) {
+// 	               panic("mock out the PutImage method")
 //             },
 //         }
 //
@@ -40,11 +46,17 @@ type ImageAPIClientMock struct {
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
 
+	// GetImageFunc mocks the GetImage method.
+	GetImageFunc func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string) (image.Image, error)
+
 	// PostDownloadVariantFunc mocks the PostDownloadVariant method.
 	PostDownloadVariantFunc func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.NewImageDownload) (image.ImageDownload, error)
 
 	// PutDownloadVariantFunc mocks the PutDownloadVariant method.
 	PutDownloadVariantFunc func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, variant string, data image.ImageDownload) (image.ImageDownload, error)
+
+	// PutImageFunc mocks the PutImage method.
+	PutImageFunc func(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.Image) (image.Image, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -54,6 +66,19 @@ type ImageAPIClientMock struct {
 			Ctx context.Context
 			// State is the state argument value.
 			State *healthcheck.CheckState
+		}
+		// GetImage holds details about calls to the GetImage method.
+		GetImage []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// UserAuthToken is the userAuthToken argument value.
+			UserAuthToken string
+			// ServiceAuthToken is the serviceAuthToken argument value.
+			ServiceAuthToken string
+			// CollectionID is the collectionID argument value.
+			CollectionID string
+			// ImageID is the imageID argument value.
+			ImageID string
 		}
 		// PostDownloadVariant holds details about calls to the PostDownloadVariant method.
 		PostDownloadVariant []struct {
@@ -87,10 +112,27 @@ type ImageAPIClientMock struct {
 			// Data is the data argument value.
 			Data image.ImageDownload
 		}
+		// PutImage holds details about calls to the PutImage method.
+		PutImage []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+			// UserAuthToken is the userAuthToken argument value.
+			UserAuthToken string
+			// ServiceAuthToken is the serviceAuthToken argument value.
+			ServiceAuthToken string
+			// CollectionID is the collectionID argument value.
+			CollectionID string
+			// ImageID is the imageID argument value.
+			ImageID string
+			// Data is the data argument value.
+			Data image.Image
+		}
 	}
 	lockChecker             sync.RWMutex
+	lockGetImage            sync.RWMutex
 	lockPostDownloadVariant sync.RWMutex
 	lockPutDownloadVariant  sync.RWMutex
+	lockPutImage            sync.RWMutex
 }
 
 // Checker calls CheckerFunc.
@@ -125,6 +167,53 @@ func (mock *ImageAPIClientMock) CheckerCalls() []struct {
 	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
 	mock.lockChecker.RUnlock()
+	return calls
+}
+
+// GetImage calls GetImageFunc.
+func (mock *ImageAPIClientMock) GetImage(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string) (image.Image, error) {
+	if mock.GetImageFunc == nil {
+		panic("ImageAPIClientMock.GetImageFunc: method is nil but ImageAPIClient.GetImage was just called")
+	}
+	callInfo := struct {
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		CollectionID     string
+		ImageID          string
+	}{
+		Ctx:              ctx,
+		UserAuthToken:    userAuthToken,
+		ServiceAuthToken: serviceAuthToken,
+		CollectionID:     collectionID,
+		ImageID:          imageID,
+	}
+	mock.lockGetImage.Lock()
+	mock.calls.GetImage = append(mock.calls.GetImage, callInfo)
+	mock.lockGetImage.Unlock()
+	return mock.GetImageFunc(ctx, userAuthToken, serviceAuthToken, collectionID, imageID)
+}
+
+// GetImageCalls gets all the calls that were made to GetImage.
+// Check the length with:
+//     len(mockedImageAPIClient.GetImageCalls())
+func (mock *ImageAPIClientMock) GetImageCalls() []struct {
+	Ctx              context.Context
+	UserAuthToken    string
+	ServiceAuthToken string
+	CollectionID     string
+	ImageID          string
+} {
+	var calls []struct {
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		CollectionID     string
+		ImageID          string
+	}
+	mock.lockGetImage.RLock()
+	calls = mock.calls.GetImage
+	mock.lockGetImage.RUnlock()
 	return calls
 }
 
@@ -231,5 +320,56 @@ func (mock *ImageAPIClientMock) PutDownloadVariantCalls() []struct {
 	mock.lockPutDownloadVariant.RLock()
 	calls = mock.calls.PutDownloadVariant
 	mock.lockPutDownloadVariant.RUnlock()
+	return calls
+}
+
+// PutImage calls PutImageFunc.
+func (mock *ImageAPIClientMock) PutImage(ctx context.Context, userAuthToken string, serviceAuthToken string, collectionID string, imageID string, data image.Image) (image.Image, error) {
+	if mock.PutImageFunc == nil {
+		panic("ImageAPIClientMock.PutImageFunc: method is nil but ImageAPIClient.PutImage was just called")
+	}
+	callInfo := struct {
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		CollectionID     string
+		ImageID          string
+		Data             image.Image
+	}{
+		Ctx:              ctx,
+		UserAuthToken:    userAuthToken,
+		ServiceAuthToken: serviceAuthToken,
+		CollectionID:     collectionID,
+		ImageID:          imageID,
+		Data:             data,
+	}
+	mock.lockPutImage.Lock()
+	mock.calls.PutImage = append(mock.calls.PutImage, callInfo)
+	mock.lockPutImage.Unlock()
+	return mock.PutImageFunc(ctx, userAuthToken, serviceAuthToken, collectionID, imageID, data)
+}
+
+// PutImageCalls gets all the calls that were made to PutImage.
+// Check the length with:
+//     len(mockedImageAPIClient.PutImageCalls())
+func (mock *ImageAPIClientMock) PutImageCalls() []struct {
+	Ctx              context.Context
+	UserAuthToken    string
+	ServiceAuthToken string
+	CollectionID     string
+	ImageID          string
+	Data             image.Image
+} {
+	var calls []struct {
+		Ctx              context.Context
+		UserAuthToken    string
+		ServiceAuthToken string
+		CollectionID     string
+		ImageID          string
+		Data             image.Image
+	}
+	mock.lockPutImage.RLock()
+	calls = mock.calls.PutImage
+	mock.lockPutImage.RUnlock()
 	return calls
 }

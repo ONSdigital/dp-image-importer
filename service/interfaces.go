@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"github.com/ONSdigital/dp-image-importer/event"
 	"net/http"
 
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-image-importer/config"
+	"github.com/ONSdigital/dp-image-importer/event"
 	kafka "github.com/ONSdigital/dp-kafka"
 	"github.com/aws/aws-sdk-go/aws/session"
 )

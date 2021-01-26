@@ -26,6 +26,7 @@ const (
 	vaultKey       = "key" // is the key under each vault secret that contains the PSK needed to encrypt/decrypt files in S3
 	importingState = "importing"
 	importedState  = "imported"
+	failedState    = "failed_import"
 	variantId      = "original"
 	variantType    = "png"
 )
@@ -72,6 +73,8 @@ type VaultClient interface {
 // ImageAPIClient defines the required methods from image API client
 type ImageAPIClient interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
+	GetImage(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, imageID string) (image.Image, error)
+	PutImage(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, imageID string, data image.Image) (image.Image, error)
 	PostDownloadVariant(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, imageID string, data image.NewImageDownload) (image.ImageDownload, error)
 	PutDownloadVariant(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, imageID, variant string, data image.ImageDownload) (image.ImageDownload, error)
 }
@@ -98,6 +101,7 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 		uploadPsk, err = h.getVaultKeyForFile(uploadPath)
 		if err != nil {
 			log.Event(ctx, "error reading key from vault", log.ERROR, log.Error(err), logData)
+			h.setImageStatusToFailed(ctx, event.ImageID, "error reading key from vault")
 			return err
 		}
 	}
@@ -105,6 +109,7 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 	reader, err := h.getS3Reader(ctx, uploadPath, uploadPsk)
 	if err != nil {
 		log.Event(ctx, "error getting s3 object reader", log.ERROR, log.Error(err), logData)
+		h.setImageStatusToFailed(ctx, event.ImageID, "error getting s3 object reader")
 		return
 	}
 	defer reader.Close()
@@ -120,6 +125,7 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 	})
 	if err != nil {
 		log.Event(ctx, "error posting image variant to API", log.ERROR, log.Error(err), logData)
+		h.setImageStatusToFailed(ctx, event.ImageID, "error posting image variant to API")
 		return
 	}
 	logData["imageDownload"] = &imageDownload
@@ -135,6 +141,7 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 		variantPSK, err = h.createVaultKeyForFile(variantPath)
 		if err != nil {
 			log.Event(ctx, "error writing key to vault", log.ERROR, log.Error(err), logData)
+			h.setVariantStatusToFailed(ctx, event.ImageID, imageDownload, "failed to write vault key")
 			return
 		}
 	}
@@ -143,6 +150,7 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 	err = h.uploadToS3(ctx, variantPath, variantPSK, reader)
 	if err != nil {
 		log.Event(ctx, "error uploading to s3", log.ERROR, log.Error(err), logData)
+		h.setVariantStatusToFailed(ctx, event.ImageID, imageDownload, "failed to upload variant to s3")
 		return
 	}
 	endTime := time.Now().UTC()
@@ -158,6 +166,7 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 	imageDownload, err = h.ImageCli.PutDownloadVariant(ctx, "", h.AuthToken, "", event.ImageID, imageDownload.Id, imageDownload)
 	if err != nil {
 		log.Event(ctx, "error putting image variant to API", log.ERROR, log.Error(err), logData)
+		h.setImageStatusToFailed(ctx, event.ImageID, "error putting updated image variant to API")
 		return
 	}
 	log.Event(ctx, "put image download", log.INFO, logData)
@@ -227,7 +236,7 @@ func (h *ImageUploadedHandler) getVaultKeyForFile(keyPath string) ([]byte, error
 	return psk, nil
 }
 
-// getVaultKeyForFile creates a new encryption key and stores it in Vault for the provided path
+// createVaultKeyForFile creates a new encryption key and stores it in Vault for the provided path
 func (h *ImageUploadedHandler) createVaultKeyForFile(keyPath string) ([]byte, error) {
 	psk := make([]byte, 16)
 	rand.Read(psk)
@@ -238,4 +247,29 @@ func (h *ImageUploadedHandler) createVaultKeyForFile(keyPath string) ([]byte, er
 	}
 
 	return psk, nil
+}
+
+func (h *ImageUploadedHandler) setImageStatusToFailed(ctx context.Context, imageID string, desc string) {
+	image, err := h.ImageCli.GetImage(ctx, "", h.AuthToken, "", imageID)
+	if err != nil {
+		log.Event(ctx, "error getting image from API to set failed_import status", log.ERROR, log.Error(err))
+		return
+	}
+	image.State = failedState
+	image.Error = desc
+	_, err = h.ImageCli.PutImage(ctx, "", h.AuthToken, "", imageID, image)
+	if err != nil {
+		log.Event(ctx, "error putting image to API to set failed_import status", log.ERROR, log.Error(err))
+		return
+	}
+}
+
+func (h *ImageUploadedHandler) setVariantStatusToFailed(ctx context.Context, imageID string, variant image.ImageDownload, desc string) {
+	variant.State = failedState
+	variant.Error = desc
+	_, err := h.ImageCli.PutDownloadVariant(ctx, "", h.AuthToken, "", imageID, variant.Id, variant)
+	if err != nil {
+		log.Event(ctx, "error putting image variant to API to set failed_import status", log.ERROR, log.Error(err))
+		return
+	}
 }
