@@ -27,7 +27,7 @@ const (
 	importingState = "importing"
 	importedState  = "imported"
 	failedState    = "failed_import"
-	variantId      = "original"
+	variantID      = "original"
 	variantType    = "png"
 )
 
@@ -116,7 +116,7 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 
 	// POST /images/{id}/downloads
 	imageDownload, err := h.ImageCli.PostDownloadVariant(ctx, "", h.AuthToken, "", event.ImageID, image.NewImageDownload{
-		Id:            variantId,
+		Id:            variantID,
 		Height:        nil,
 		Type:          variantType,
 		Width:         nil,
@@ -132,7 +132,7 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 	log.Event(ctx, "posted image download", log.INFO, logData)
 
 	// Variant S3 key 'images/{id}/{variantId}'
-	variantPath := path.Join("images", event.ImageID, variantId)
+	variantPath := path.Join("images", event.ImageID, variantID)
 	logData["variant_path"] = variantPath
 
 	var variantPSK []byte

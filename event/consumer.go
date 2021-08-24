@@ -2,99 +2,86 @@ package event
 
 import (
 	"context"
-	"errors"
+	"sync"
 
 	"github.com/ONSdigital/dp-image-importer/schema"
-	kafka "github.com/ONSdigital/dp-kafka"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
 	"github.com/ONSdigital/log.go/log"
 )
 
 //go:generate moq -out mock/handler.go -pkg mock . Handler
-
-// MessageConsumer provides a generic interface for consuming []byte messages
-type MessageConsumer interface {
-	Channels() *kafka.ConsumerGroupChannels
-	Release()
-}
 
 // Handler represents a handler for processing a single event.
 type Handler interface {
 	Handle(ctx context.Context, ImageUploaded *ImageUploaded) error
 }
 
-// Consumer consumes event messages.
-type Consumer struct {
-	closing chan bool
-	closed  chan bool
-}
-
-// NewConsumer returns a new consumer instance.
-func NewConsumer() *Consumer {
-	return &Consumer{
-		closing: make(chan bool),
-		closed:  make(chan bool),
-	}
-}
-
 // Consume converts messages to event instances, and pass the event to the provided handler.
-func (consumer *Consumer) Consume(ctx context.Context, messageConsumer MessageConsumer, handler Handler) {
+func Consume(ctx context.Context, cg kafka.IConsumerGroup, handler Handler, numWorkers int) {
 
-	go func() {
-		defer close(consumer.closed)
+	// waitGroup for workers
+	wg := &sync.WaitGroup{}
 
+	// func to be executed by each worker in a goroutine
+	workerConsume := func(workerNum int) {
+		defer wg.Done()
 		for {
 			select {
-			case message := <-messageConsumer.Channels().Upstream:
+			case message, ok := <-cg.Channels().Upstream:
+				logData := log.Data{"message_offset": message.Offset(), "workers": workerNum}
+				if !ok {
+					log.Event(ctx, "upstream channel closed - closing event consumer loop", log.INFO, logData)
+					return
+				}
+
+				// This context will be obtained from the kafka message in the future
 				messageCtx := context.Background()
-				processMessage(messageCtx, message, handler)
-				messageConsumer.Release()
-			case <-consumer.closing:
-				log.Event(ctx, "closing event consumer loop", log.INFO)
+				err := processMessage(messageCtx, message, handler)
+				if err != nil {
+					log.Event(ctx, "failed to process message", log.ERROR, log.Error(err), logData)
+				}
+				log.Event(ctx, "message committed", log.INFO, logData)
+
+				message.Release()
+				log.Event(ctx, "message released", log.INFO, logData)
+
+			case <-cg.Channels().Closer:
+				log.Event(ctx, "closing event consumer loop because closer channel is closed", log.Data{"workers": workerNum}, log.INFO)
 				return
 			}
 		}
-	}()
-
-}
-
-// Close safely closes the consumer and releases all resources
-func (consumer *Consumer) Close(ctx context.Context) (err error) {
-	if ctx == nil {
-		ctx = context.Background()
 	}
 
-	close(consumer.closing)
-
-	select {
-	case <-consumer.closed:
-		log.Event(ctx, "successfully closed event consumer", log.INFO)
-		return nil
-	case <-ctx.Done():
-		log.Event(ctx, "shutdown context time exceeded, skipping graceful shutdown of event consumer", log.INFO)
-		return errors.New("shutdown context timed out")
+	// workers to consume messages in parallel
+	for w := 1; w <= numWorkers; w++ {
+		go workerConsume(w)
 	}
 }
 
 // processMessage unmarshals the provided kafka message into an event and calls the handler.
 // After the message is successfully handled, it is committed.
-func processMessage(ctx context.Context, message kafka.Message, handler Handler) {
+func processMessage(ctx context.Context, message kafka.Message, handler Handler) error {
+	defer message.Commit()
+
+	logData := log.Data{"message_offset": message.Offset()}
 
 	event, err := unmarshal(message)
 	if err != nil {
-		log.Event(ctx, "failed to unmarshal event", log.ERROR, log.Error(err))
-		return
+		log.Event(ctx, "failed to unmarshal event", log.ERROR, logData, log.Error(err))
+		return err
 	}
 
-	log.Event(ctx, "event received", log.INFO, log.Data{"event": event})
+	logData["event"] = event
+
+	log.Event(ctx, "event received", log.INFO, logData)
 
 	err = handler.Handle(ctx, event)
 	if err != nil {
 		log.Event(ctx, "failed to handle event", log.ERROR, log.Error(err))
+		return err
 	}
 
-	log.Event(ctx, "event processed - committing message", log.INFO, log.Data{"event": event})
-	message.Commit()
-	log.Event(ctx, "message committed", log.INFO, log.Data{"event": event})
+	return nil
 }
 
 // unmarshal converts a event instance to []byte.

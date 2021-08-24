@@ -17,6 +17,8 @@ type Config struct {
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
 	ImageAPIURL                string        `envconfig:"IMAGE_API_URL"`
 	Brokers                    []string      `envconfig:"KAFKA_ADDR"                     json:"-"`
+	KafkaConsumerWorkers       int           `envconfig:"KAFKA_CONSUMER_WORKERS"`
+	KafkaVersion               string        `envconfig:"KAFKA_VERSION"`
 	ImageUploadedGroup         string        `envconfig:"IMAGE_UPLOADED_GROUP"`
 	ImageUploadedTopic         string        `envconfig:"IMAGE_UPLOADED_TOPIC"`
 	S3PrivateBucketName        string        `envconfig:"S3_PRIVATE_BUCKET_NAME"`
@@ -46,6 +48,8 @@ func Get() (*Config, error) {
 		HealthCheckCriticalTimeout: 90 * time.Second,
 		ImageAPIURL:                "http://localhost:24700",
 		Brokers:                    []string{"localhost:9092"},
+		KafkaVersion:               "1.0.2",
+		KafkaConsumerWorkers:       1,
 		ImageUploadedGroup:         "dp-image-importer",
 		ImageUploadedTopic:         "image-uploaded",
 		S3PrivateBucketName:        "csv-exported",

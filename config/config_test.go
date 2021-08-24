@@ -30,6 +30,8 @@ func TestConfig(t *testing.T) {
 				So(cfg.ImageAPIURL, ShouldEqual, "http://localhost:24700")
 				So(cfg.Brokers, ShouldHaveLength, 1)
 				So(cfg.Brokers[0], ShouldEqual, "localhost:9092")
+				So(cfg.KafkaConsumerWorkers, ShouldEqual, 1)
+				So(cfg.KafkaVersion, ShouldEqual, "1.0.2")
 				So(cfg.ImageUploadedGroup, ShouldEqual, "dp-image-importer")
 				So(cfg.ImageUploadedTopic, ShouldEqual, "image-uploaded")
 				So(cfg.S3PrivateBucketName, ShouldEqual, "csv-exported")
