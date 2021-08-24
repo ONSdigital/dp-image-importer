@@ -2,7 +2,6 @@ package event
 
 import (
 	"context"
-	"sync"
 
 	"github.com/ONSdigital/dp-image-importer/schema"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
@@ -18,25 +17,18 @@ type Handler interface {
 
 // Consume converts messages to event instances, and pass the event to the provided handler.
 func Consume(ctx context.Context, cg kafka.IConsumerGroup, handler Handler, numWorkers int) {
-
-	// waitGroup for workers
-	wg := &sync.WaitGroup{}
-
 	// func to be executed by each worker in a goroutine
 	workerConsume := func(workerNum int) {
-		defer wg.Done()
 		for {
 			select {
 			case message, ok := <-cg.Channels().Upstream:
-				logData := log.Data{"message_offset": message.Offset(), "workers": workerNum}
+				logData := log.Data{"message_offset": message.Offset(), "worker_num": workerNum}
 				if !ok {
 					log.Event(ctx, "upstream channel closed - closing event consumer loop", log.INFO, logData)
 					return
 				}
 
-				// This context will be obtained from the kafka message in the future
-				messageCtx := context.Background()
-				err := processMessage(messageCtx, message, handler)
+				err := processMessage(ctx, message, handler)
 				if err != nil {
 					log.Event(ctx, "failed to process message", log.ERROR, log.Error(err), logData)
 				}
@@ -46,7 +38,7 @@ func Consume(ctx context.Context, cg kafka.IConsumerGroup, handler Handler, numW
 				log.Event(ctx, "message released", log.INFO, logData)
 
 			case <-cg.Channels().Closer:
-				log.Event(ctx, "closing event consumer loop because closer channel is closed", log.Data{"workers": workerNum}, log.INFO)
+				log.Event(ctx, "closing event consumer loop because closer channel is closed", log.Data{"worker_num": workerNum}, log.INFO)
 				return
 			}
 		}
