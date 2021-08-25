@@ -38,6 +38,7 @@ The service runs in the background consuming messages from Kafka. The messages a
 | KAFKA_SEC_CLIENT_CERT        | _unset_                           | PEM [2] for the client certificate (optional, used for client auth) [1]
 | KAFKA_SEC_CA_CERTS           | _unset_                           | PEM [2] of CA cert chain if using private CA for the server cert [1]
 | KAFKA_SEC_SKIP_VERIFY        | false                             | ignore server certificate issues if set to `true` [1]
+| KAFKA_CONSUMER_WORKERS       | 1                                 | The maximum number of parallel kafka consumers
 | IMAGE_UPLOADED_GROUP         | dp-image-importer                 | The consumer group this application to consume ImageUploaded messages
 | IMAGE_UPLOADED_TOPIC         | image-uploaded                    | The name of the topic to consume messages from
 | S3_PRIVATE_BUCKET_NAME       | csv-exported                      | Name of the S3 bucket used to store generated images
