@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
+	"os"
+
 	"github.com/ONSdigital/dp-api-clients-go/image"
 	"github.com/ONSdigital/dp-image-importer/config"
-	"github.com/ONSdigital/log.go/log"
-	"os"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 const (
@@ -20,10 +21,10 @@ func main() {
 
 	cfg, err := config.Get()
 	if err != nil {
-		log.Event(ctx, "error getting cfg", log.FATAL, log.Error(err))
+		log.Fatal(ctx, "error getting cfg", err)
 		os.Exit(1)
 	}
-	log.Event(ctx, "loaded cfg", log.INFO, log.Data{"cfg": cfg})
+	log.Info(ctx, "loaded cfg", log.Data{"cfg": cfg})
 
 	// Create image via api
 	imageApi := image.NewAPIClient(cfg.ImageAPIURL)
@@ -36,14 +37,14 @@ func main() {
 	}
 	image, err := imageApi.PostImage(ctx, "", cfg.ServiceAuthToken, collectionId, newImage)
 	if err != nil {
-		log.Event(ctx, "fatal error trying to create image record in API", log.FATAL, log.Error(err), log.Data{"new_image": newImage})
+		log.Fatal(ctx, "fatal error trying to create image record in API", err, log.Data{"new_image": newImage})
 		os.Exit(1)
 	}
 	image.State = "uploaded"
 	image.Upload.Path = s3UploadPath
 	image, err = imageApi.PutImage(ctx, "", cfg.ServiceAuthToken, collectionId, image.Id, image)
 	if err != nil {
-		log.Event(ctx, "fatal error trying to update image record with upload info", log.FATAL, log.Error(err), log.Data{"new_image": newImage})
+		log.Fatal(ctx, "fatal error trying to update image record with upload info", err, log.Data{"new_image": newImage})
 		os.Exit(1)
 	}
 }

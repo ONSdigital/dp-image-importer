@@ -5,7 +5,7 @@ import (
 
 	"github.com/ONSdigital/dp-image-importer/schema"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
-	"github.com/ONSdigital/log.go/log"
+	"github.com/ONSdigital/log.go/v2/log"
 )
 
 //go:generate moq -out mock/handler.go -pkg mock . Handler
@@ -24,21 +24,21 @@ func Consume(ctx context.Context, cg kafka.IConsumerGroup, handler Handler, numW
 			case message, ok := <-cg.Channels().Upstream:
 				logData := log.Data{"message_offset": message.Offset(), "worker_num": workerNum}
 				if !ok {
-					log.Event(ctx, "upstream channel closed - closing event consumer loop", log.INFO, logData)
+					log.Info(ctx, "upstream channel closed - closing event consumer loop", logData)
 					return
 				}
 
 				err := processMessage(ctx, message, handler)
 				if err != nil {
-					log.Event(ctx, "failed to process message", log.ERROR, log.Error(err), logData)
+					log.Error(ctx, "failed to process message", err, logData)
 				}
-				log.Event(ctx, "message committed", log.INFO, logData)
+				log.Info(ctx, "message committed", logData)
 
 				message.Release()
-				log.Event(ctx, "message released", log.INFO, logData)
+				log.Info(ctx, "message released", logData)
 
 			case <-cg.Channels().Closer:
-				log.Event(ctx, "closing event consumer loop because closer channel is closed", log.Data{"worker_num": workerNum}, log.INFO)
+				log.Info(ctx, "closing event consumer loop because closer channel is closed", log.Data{"worker_num": workerNum})
 				return
 			}
 		}
@@ -59,17 +59,17 @@ func processMessage(ctx context.Context, message kafka.Message, handler Handler)
 
 	event, err := unmarshal(message)
 	if err != nil {
-		log.Event(ctx, "failed to unmarshal event", log.ERROR, logData, log.Error(err))
+		log.Error(ctx, "failed to unmarshal event", err, logData)
 		return err
 	}
 
 	logData["event"] = event
 
-	log.Event(ctx, "event received", log.INFO, logData)
+	log.Info(ctx, "event received", logData)
 
 	err = handler.Handle(ctx, event)
 	if err != nil {
-		log.Event(ctx, "failed to handle event", log.ERROR, log.Error(err))
+		log.Error(ctx, "failed to handle event", err)
 		return err
 	}
 
