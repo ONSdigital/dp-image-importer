@@ -140,6 +140,14 @@ func (e *Init) DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (kafk
 		Offset:       &kafkaOffset,
 		KafkaVersion: &cfg.KafkaVersion,
 	}
+	if cfg.KafkaSecProtocol == "TLS" {
+		cConfig.SecurityConfig = kafka.GetSecurityConfig(
+			cfg.KafkaSecCACerts,
+			cfg.KafkaSecClientCert,
+			cfg.KafkaSecClientKey,
+			cfg.KafkaSecSkipVerify,
+		)
+	}
 
 	cgChannels := kafka.CreateConsumerGroupChannels(cfg.KafkaConsumerWorkers)
 
