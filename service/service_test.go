@@ -13,7 +13,8 @@ import (
 	eventMock "github.com/ONSdigital/dp-image-importer/event/mock"
 	"github.com/ONSdigital/dp-image-importer/service"
 	serviceMock "github.com/ONSdigital/dp-image-importer/service/mock"
-	kafka "github.com/ONSdigital/dp-kafka"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
+	"github.com/ONSdigital/dp-kafka/v2/kafkatest"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/pkg/errors"
 	. "github.com/smartystreets/goconvey/convey"
@@ -41,7 +42,7 @@ var funcDoS3PrivateErr = func(awsRegion, bucketName string, encryptionEnabled bo
 	return nil, errS3Private
 }
 
-var funcDoGetKafkaConsumerErr = func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error) {
+var funcDoGetKafkaConsumerErr = func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
 	return nil, errKafkaConsumer
 }
 
@@ -74,7 +75,7 @@ func TestRun(t *testing.T) {
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		consumerMock := &serviceMock.KafkaConsumerMock{
+		consumerMock := &kafkatest.IConsumerGroupMock{
 			CheckerFunc:  func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 			ChannelsFunc: func() *kafka.ConsumerGroupChannels { return &kafka.ConsumerGroupChannels{} },
 		}
@@ -108,7 +109,7 @@ func TestRun(t *testing.T) {
 			return imageAPIMock
 		}
 
-		funcDoGetKafkaConsumerOk := func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error) {
+		funcDoGetKafkaConsumerOk := func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
 			return consumerMock, nil
 		}
 
@@ -324,7 +325,7 @@ func TestClose(t *testing.T) {
 			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
 		}
 
-		consumerMock := &serviceMock.KafkaConsumerMock{
+		consumerMock := &kafkatest.IConsumerGroupMock{
 			StopListeningToConsumerFunc: func(ctx context.Context) error { return nil },
 			CloseFunc:                   func(ctx context.Context) error { return nil },
 			CheckerFunc:                 func(ctx context.Context, state *healthcheck.CheckState) error { return nil },
@@ -364,7 +365,7 @@ func TestClose(t *testing.T) {
 					return hcMock, nil
 				},
 				DoGetImageAPIFunc:      func(ctx context.Context, cfg *config.Config) event.ImageAPIClient { return imageAPIMock },
-				DoGetKafkaConsumerFunc: func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error) { return consumerMock, nil },
+				DoGetKafkaConsumerFunc: func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) { return consumerMock, nil },
 			}
 
 			svcErrors := make(chan error, 1)
@@ -402,7 +403,7 @@ func TestClose(t *testing.T) {
 					return hcMock, nil
 				},
 				DoGetImageAPIFunc:      func(ctx context.Context, cfg *config.Config) event.ImageAPIClient { return imageAPIMock },
-				DoGetKafkaConsumerFunc: func(ctx context.Context, cfg *config.Config) (service.KafkaConsumer, error) { return consumerMock, nil },
+				DoGetKafkaConsumerFunc: func(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) { return consumerMock, nil },
 			}
 
 			svcErrors := make(chan error, 1)

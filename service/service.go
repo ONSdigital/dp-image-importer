@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+
 	"github.com/ONSdigital/dp-image-importer/config"
 	"github.com/ONSdigital/dp-image-importer/event"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
 	"github.com/ONSdigital/log.go/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -11,14 +13,13 @@ import (
 
 // Service contains all the configs, server and clients to run the Image API
 type Service struct {
-	config        *config.Config
-	server        HTTPServer
-	router        *mux.Router
-	serviceList   *ExternalServiceList
-	healthCheck   HealthChecker
-	vault         event.VaultClient
-	consumer      KafkaConsumer
-	eventConsumer EventConsumer
+	config      *config.Config
+	server      HTTPServer
+	router      *mux.Router
+	serviceList *ExternalServiceList
+	healthCheck HealthChecker
+	vault       event.VaultClient
+	consumer    kafka.IConsumerGroup
 }
 
 // Run the service
@@ -61,8 +62,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	}
 
 	// Event Handler for Kafka Consumer with the created S3 Clients and Vault
-	eventConsumer := event.NewConsumer()
-	eventConsumer.Consume(ctx, consumer, &event.ImageUploadedHandler{
+	event.Consume(ctx, consumer, &event.ImageUploadedHandler{
 		AuthToken:          cfg.ServiceAuthToken,
 		S3Private:          s3Private,
 		S3Upload:           s3Uploaded,
@@ -70,7 +70,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		VaultPath:          cfg.VaultPath,
 		ImageCli:           imageAPI,
 		DownloadServiceURL: cfg.DownloadServiceURL,
-	})
+	}, cfg.KafkaConsumerWorkers)
 
 	// Get HealthCheck
 	hc, err := serviceList.GetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -94,14 +94,13 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	}()
 
 	return &Service{
-		config:        cfg,
-		server:        s,
-		router:        r,
-		serviceList:   serviceList,
-		healthCheck:   hc,
-		vault:         vault,
-		consumer:      consumer,
-		eventConsumer: eventConsumer,
+		config:      cfg,
+		server:      s,
+		router:      r,
+		serviceList: serviceList,
+		healthCheck: hc,
+		vault:       vault,
+		consumer:    consumer,
 	}, nil
 }
 
@@ -125,15 +124,11 @@ func (svc *Service) Close(ctx context.Context) error {
 
 		// If kafka consumer exists, stop listening to it. (Will close later)
 		if svc.serviceList.KafkaConsumer {
-			log.Event(ctx, "stopping kafka consumer listener", log.INFO)
-			svc.consumer.StopListeningToConsumer(ctx)
+			if err := svc.consumer.StopListeningToConsumer(ctx); err != nil {
+				log.Event(ctx, "error stopping kafka consumer listener", log.ERROR, log.Error(err))
+				hasShutdownError = true
+			}
 			log.Event(ctx, "stopped kafka consumer listener", log.INFO)
-		}
-
-		// Close EventConsumer
-		if err := svc.eventConsumer.Close(ctx); err != nil {
-			log.Event(ctx, "error closing event consumer", log.ERROR, log.Error(err))
-			hasShutdownError = true
 		}
 
 		// stop any incoming requests before closing any outbound connections
@@ -144,8 +139,10 @@ func (svc *Service) Close(ctx context.Context) error {
 
 		// If kafka consumer exists, close it.
 		if svc.serviceList.KafkaConsumer {
-			log.Event(ctx, "closing kafka consumer", log.INFO)
-			svc.consumer.Close(ctx)
+			if err := svc.consumer.Close(ctx); err != nil {
+				log.Event(ctx, "error closing kafka consumer", log.Error(err), log.ERROR)
+				hasShutdownError = true
+			}
 			log.Event(ctx, "closed kafka consumer", log.INFO)
 		}
 
@@ -173,7 +170,7 @@ func registerCheckers(ctx context.Context,
 	s3Private event.S3Writer,
 	s3Uploaded event.S3Reader,
 	imageAPI event.ImageAPIClient,
-	consumer KafkaConsumer) (err error) {
+	consumer kafka.IConsumerGroup) (err error) {
 
 	hasErrors := false
 
