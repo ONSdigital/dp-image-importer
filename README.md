@@ -31,8 +31,8 @@ The service runs in the background consuming messages from Kafka. The messages a
 | HEALTHCHECK_INTERVAL         | 30s                               | Time between self-healthchecks (`time.Duration` format)
 | HEALTHCHECK_CRITICAL_TIMEOUT | 90s                               | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format)
 | IMAGE_API_URL                | http://localhost:24700            | The image api url
-| KAFKA_ADDR                   | `localhost:9092`                  | The address of (TLS-ready) Kafka brokers (comma-separated values)
-| KAFKA_VERSION                | `1.0.2`                           | The version of (TLS-ready) Kafka
+| KAFKA_ADDR                   | `localhost:9092`                  | The address of Kafka brokers (comma-separated values)
+| KAFKA_VERSION                | `1.0.2`                           | The version of Kafka
 | KAFKA_SEC_PROTO              | _unset_            (only `TLS`)   | if set to `TLS`, kafka connections will use TLS
 | KAFKA_SEC_CLIENT_KEY         | _unset_                           | PEM [2] for the client key (optional, used for client auth) [1]
 | KAFKA_SEC_CLIENT_CERT        | _unset_                           | PEM [2] for the client certificate (optional, used for client auth) [1]
@@ -48,13 +48,9 @@ The service runs in the background consuming messages from Kafka. The messages a
 | VAULT_PATH                   | secret/shared/psk                 | The path where the psks will be stored in vault
 | DOWNLOAD_SERVICE_URL         | http://localhost:23600            | The public address of the download service
 
-Notes:
+**Notes:**
 
-1. Ignored unless using TLS (i.e. `KAFKA_SEC_PROTO` has a value enabling TLS)
-
-2. PEM values are identified as those starting with `-----BEGIN`
-    and can use `\n` (sic) instead of newlines (they will be converted to newlines before use).
-    Any other value will be treated as a path to the given PEM file.
+1. For more info, see the [kafka TLS examples documentation](https://github.com/ONSdigital/dp-kafka/tree/main/examples#tls)
 
 ### Healthcheck
 

@@ -21,7 +21,7 @@ type Config struct {
 	KafkaSecProtocol           string        `envconfig:"KAFKA_SEC_PROTO"`
 	KafkaSecCACerts            string        `envconfig:"KAFKA_SEC_CA_CERTS"`
 	KafkaSecClientCert         string        `envconfig:"KAFKA_SEC_CLIENT_CERT"`
-	KafkaSecClientKey          string        `envconfig:"KAFKA_SEC_CLIENT_KEY" json:"-"`
+	KafkaSecClientKey          string        `envconfig:"KAFKA_SEC_CLIENT_KEY"           json:"-"`
 	KafkaSecSkipVerify         bool          `envconfig:"KAFKA_SEC_SKIP_VERIFY"`
 	KafkaConsumerWorkers       int           `envconfig:"KAFKA_CONSUMER_WORKERS"`
 	ImageUploadedGroup         string        `envconfig:"IMAGE_UPLOADED_GROUP"`
