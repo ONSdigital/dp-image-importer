@@ -134,11 +134,19 @@ func (e *Init) DoGetImageAPI(ctx context.Context, cfg *config.Config) event.Imag
 
 // DoGetKafkaConsumer returns a Kafka Consumer group
 func (e *Init) DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
-	kafkaOffset := kafka.OffsetNewest
+	kafkaOffset := kafka.OffsetOldest
 
 	cConfig := &kafka.ConsumerGroupConfig{
 		Offset:       &kafkaOffset,
 		KafkaVersion: &cfg.KafkaVersion,
+	}
+	if cfg.KafkaSecProtocol == "TLS" {
+		cConfig.SecurityConfig = kafka.GetSecurityConfig(
+			cfg.KafkaSecCACerts,
+			cfg.KafkaSecClientCert,
+			cfg.KafkaSecClientKey,
+			cfg.KafkaSecSkipVerify,
+		)
 	}
 
 	cgChannels := kafka.CreateConsumerGroupChannels(cfg.KafkaConsumerWorkers)

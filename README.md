@@ -1,9 +1,8 @@
-dp-image-importer
-================
+# dp-image-importer
 
 ONS service that imports uploaded images and adds them to a private bucket
 
-### Getting started
+## Getting started
 
 * Run `make debug`
 
@@ -32,7 +31,14 @@ The service runs in the background consuming messages from Kafka. The messages a
 | HEALTHCHECK_INTERVAL         | 30s                               | Time between self-healthchecks (`time.Duration` format)
 | HEALTHCHECK_CRITICAL_TIMEOUT | 90s                               | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format)
 | IMAGE_API_URL                | http://localhost:24700            | The image api url
-| KAFKA_ADDR                   | "localhost:9092"                  | The address of Kafka (accepts list)
+| KAFKA_ADDR                   | `localhost:9092`                  | The address of Kafka brokers (comma-separated values)
+| KAFKA_VERSION                | `1.0.2`                           | The version of Kafka
+| KAFKA_SEC_PROTO              | _unset_            (only `TLS`)   | if set to `TLS`, kafka connections will use TLS
+| KAFKA_SEC_CLIENT_KEY         | _unset_                           | PEM [2] for the client key (optional, used for client auth) [1]
+| KAFKA_SEC_CLIENT_CERT        | _unset_                           | PEM [2] for the client certificate (optional, used for client auth) [1]
+| KAFKA_SEC_CA_CERTS           | _unset_                           | PEM [2] of CA cert chain if using private CA for the server cert [1]
+| KAFKA_SEC_SKIP_VERIFY        | false                             | ignore server certificate issues if set to `true` [1]
+| KAFKA_CONSUMER_WORKERS       | 1                                 | The maximum number of parallel kafka consumers
 | IMAGE_UPLOADED_GROUP         | dp-image-importer                 | The consumer group this application to consume ImageUploaded messages
 | IMAGE_UPLOADED_TOPIC         | image-uploaded                    | The name of the topic to consume messages from
 | S3_PRIVATE_BUCKET_NAME       | csv-exported                      | Name of the S3 bucket used to store generated images
@@ -41,6 +47,10 @@ The service runs in the background consuming messages from Kafka. The messages a
 | VAULT_ADDR                   | http://localhost:8200             | The vault address
 | VAULT_PATH                   | secret/shared/psk                 | The path where the psks will be stored in vault
 | DOWNLOAD_SERVICE_URL         | http://localhost:23600            | The public address of the download service
+
+**Notes:**
+
+1. For more info, see the [kafka TLS examples documentation](https://github.com/ONSdigital/dp-kafka/tree/main/examples#tls)
 
 ### Healthcheck
 
