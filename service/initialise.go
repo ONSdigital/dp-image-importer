@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-image-importer/config"
 	"github.com/ONSdigital/dp-image-importer/event"
-	dpkafka "github.com/ONSdigital/dp-kafka"
+	kafka "github.com/ONSdigital/dp-kafka/v2"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dps3 "github.com/ONSdigital/dp-s3"
 	dpvault "github.com/ONSdigital/dp-vault"
@@ -78,7 +78,7 @@ func (e *ExternalServiceList) GetImageAPI(ctx context.Context, cfg *config.Confi
 }
 
 // GetKafkaConsumer creates a Kafka consumer and sets the consumer flag to true
-func (e *ExternalServiceList) GetKafkaConsumer(ctx context.Context, cfg *config.Config) (KafkaConsumer, error) {
+func (e *ExternalServiceList) GetKafkaConsumer(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
 	consumer, err := e.Init.DoGetKafkaConsumer(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -133,22 +133,32 @@ func (e *Init) DoGetImageAPI(ctx context.Context, cfg *config.Config) event.Imag
 }
 
 // DoGetKafkaConsumer returns a Kafka Consumer group
-func (e *Init) DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (KafkaConsumer, error) {
-	cgChannels := dpkafka.CreateConsumerGroupChannels(true)
-	kafkaConsumer, err := dpkafka.NewConsumerGroup(
+func (e *Init) DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error) {
+	kafkaOffset := kafka.OffsetOldest
+
+	cConfig := &kafka.ConsumerGroupConfig{
+		Offset:       &kafkaOffset,
+		KafkaVersion: &cfg.KafkaVersion,
+	}
+	if cfg.KafkaSecProtocol == "TLS" {
+		cConfig.SecurityConfig = kafka.GetSecurityConfig(
+			cfg.KafkaSecCACerts,
+			cfg.KafkaSecClientCert,
+			cfg.KafkaSecClientKey,
+			cfg.KafkaSecSkipVerify,
+		)
+	}
+
+	cgChannels := kafka.CreateConsumerGroupChannels(cfg.KafkaConsumerWorkers)
+
+	return kafka.NewConsumerGroup(
 		ctx,
 		cfg.Brokers,
 		cfg.ImageUploadedTopic,
 		cfg.ImageUploadedGroup,
-		dpkafka.OffsetNewest,
-		true,
 		cgChannels,
+		cConfig,
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	return kafkaConsumer, nil
 }
 
 // DoGetHealthCheck creates a healthcheck with versionInfo
