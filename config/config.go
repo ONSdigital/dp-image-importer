@@ -52,7 +52,7 @@ func Get() (*Config, error) {
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
 		ImageAPIURL:                "http://localhost:24700",
-		Brokers:                    []string{"localhost:9092"},
+		Brokers:                    []string{"localhost:9092", "localhost:9093", "localhost:9094"},
 		KafkaVersion:               "1.0.2",
 		KafkaConsumerWorkers:       1,
 		ImageUploadedGroup:         "dp-image-importer",
