@@ -1,6 +1,6 @@
 module github.com/ONSdigital/dp-image-importer
 
-go 1.17
+go 1.19
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0
