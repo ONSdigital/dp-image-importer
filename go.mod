@@ -5,6 +5,9 @@ go 1.20
 // to avoid 'sonatype-2021-4899' non-CVE Vulnerability
 exclude github.com/gorilla/sessions v1.2.1
 
+//to avoid  [CVE-2022-29153] CWE-918: Server-Side Request Forgery (SSRF)
+exclude github.com/hashicorp/consul/api v1.1.0
+
 // to avoid 'sonatype-2020-1055' non-CVE vulnerability introduced by github.com/go-ldap/ldap/v3@v3.1.10
 replace github.com/go-ldap/ldap/v3 v3.1.10 => github.com/go-ldap/ldap/v3 v3.4.3
 
