@@ -118,13 +118,13 @@ func (e *Init) DoGetVault(ctx context.Context, cfg *config.Config) (event.VaultC
 
 // DoGetS3Client creates a new S3Client for the provided AWS region and bucket name.
 func (e *Init) DoGetS3Client(awsRegion, bucketName string, encryptionEnabled bool) (event.S3Writer, error) {
-	return dps3.NewUploader(awsRegion, bucketName, encryptionEnabled)
+	return dps3.NewUploader(awsRegion, bucketName)
 }
 
 // DoGetS3ClientWithSession creates a new S3Clienter (extension of S3Client with Upload operations)
 // for the provided bucket name, using an existing AWS session
 func (e *Init) DoGetS3ClientWithSession(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader {
-	return dps3.NewClientWithSession(bucketName, encryptionEnabled, s)
+	return dps3.NewClientWithSession(bucketName, s)
 }
 
 // DoGetImageAPI returns an Image API client
