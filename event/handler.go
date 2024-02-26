@@ -2,9 +2,6 @@ package event
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -19,11 +16,9 @@ import (
 
 //go:generate moq -out mock/s3_reader.go -pkg mock . S3Reader
 //go:generate moq -out mock/s3_writer.go -pkg mock . S3Writer
-//go:generate moq -out mock/vault.go -pkg mock . VaultClient
 //go:generate moq -out mock/image_api.go -pkg mock . ImageAPIClient
 
 const (
-	vaultKey       = "key" // is the key under each vault secret that contains the PSK needed to encrypt/decrypt files in S3
 	importingState = "importing"
 	importedState  = "imported"
 	failedState    = "failed_import"
@@ -31,16 +26,11 @@ const (
 	variantType    = "png"
 )
 
-//ErrVaultFilenameEmpty is an error returned when trying to obtain a PSK for an empty file name
-var ErrVaultFilenameEmpty = errors.New("vault filename required but was empty")
-
 // ImageUploadedHandler ...
 type ImageUploadedHandler struct {
 	AuthToken          string
 	S3Upload           S3Reader
 	S3Private          S3Writer
-	VaultCli           VaultClient
-	VaultPath          string
 	ImageCli           ImageAPIClient
 	DownloadServiceURL string
 }
@@ -51,7 +41,6 @@ type S3Writer interface {
 	Session() *session.Session
 	BucketName() string
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
-	UploadWithPSK(input *s3manager.UploadInput, psk []byte) (*s3manager.UploadOutput, error)
 }
 
 // S3Reader defines the required methods from dp-s3 to read data to an AWS S3 Bucket
@@ -60,14 +49,6 @@ type S3Reader interface {
 	Session() *session.Session
 	BucketName() string
 	Get(key string) (io.ReadCloser, *int64, error)
-	GetWithPSK(key string, psk []byte) (io.ReadCloser, *int64, error)
-}
-
-// VaultClient defines the required methods from dp-vault client
-type VaultClient interface {
-	ReadKey(path, key string) (string, error)
-	WriteKey(path, key, value string) error
-	Checker(ctx context.Context, state *healthcheck.CheckState) error
 }
 
 // ImageAPIClient defines the required methods from image API client
@@ -79,8 +60,7 @@ type ImageAPIClient interface {
 	PutDownloadVariant(ctx context.Context, userAuthToken, serviceAuthToken, collectionID, imageID, variant string, data image.ImageDownload) (image.ImageDownload, error)
 }
 
-// Handle takes a single event. It reads the PSK from Vault, uses it to decrypt the encrypted file
-// from the uploaded S3 bucket, and writes it to the private bucket with a new vault psk for encryption.
+// Handle takes a single event. From the uploaded S3 bucket, it writes it to the private bucket.
 // It also calls the API to create a new download variant and to update it after the variant has been imported.
 func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded) (err error) {
 	uploadBucket := h.S3Upload.BucketName()
@@ -89,24 +69,13 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 		"event":          event,
 		"upload_bucket":  uploadBucket,
 		"private_bucket": privateBucket,
-		"vault_path":     h.VaultPath,
 	}
 	log.Info(ctx, "event handler called", logData)
 
 	startTime := time.Now().UTC()
 	uploadPath := event.Path
 
-	var uploadPsk []byte
-	if h.VaultCli != nil {
-		uploadPsk, err = h.getVaultKeyForFile(uploadPath)
-		if err != nil {
-			log.Error(ctx, "error reading key from vault", err, logData)
-			h.setImageStatusToFailed(ctx, event.ImageID, "error reading key from vault")
-			return err
-		}
-	}
-
-	reader, err := h.getS3Reader(ctx, uploadPath, uploadPsk)
+	reader, err := h.getS3Reader(ctx, uploadPath)
 	if err != nil {
 		log.Error(ctx, "error getting s3 object reader", err, logData)
 		h.setImageStatusToFailed(ctx, event.ImageID, "error getting s3 object reader")
@@ -135,19 +104,8 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 	variantPath := path.Join("images", event.ImageID, variantID)
 	logData["variant_path"] = variantPath
 
-	var variantPSK []byte
-	if h.VaultCli != nil {
-		log.Info(ctx, "writing new key to vault", logData)
-		variantPSK, err = h.createVaultKeyForFile(variantPath)
-		if err != nil {
-			log.Error(ctx, "error writing key to vault", err, logData)
-			h.setVariantStatusToFailed(ctx, event.ImageID, imageDownload, "failed to write vault key")
-			return
-		}
-	}
-
 	log.Info(ctx, "uploading private file to s3", logData)
-	err = h.uploadToS3(ctx, variantPath, variantPSK, reader)
+	err = h.uploadToS3(ctx, variantPath, reader)
 	if err != nil {
 		log.Error(ctx, "error uploading to s3", err, logData)
 		h.setVariantStatusToFailed(ctx, event.ImageID, imageDownload, "failed to upload variant to s3")
@@ -175,78 +133,27 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 }
 
 // Get an S3 reader
-func (h *ImageUploadedHandler) getS3Reader(ctx context.Context, path string, psk []byte) (reader io.ReadCloser, err error) {
-	if psk != nil {
-		// Decrypt image from upload bucket using PSK obtained from Vault
-		reader, _, err = h.S3Upload.GetWithPSK(path, psk)
-		if err != nil {
-			return
-		}
-	} else {
-		// Get image from upload bucket
-		reader, _, err = h.S3Upload.Get(path)
-		if err != nil {
-			return
-		}
-	}
+func (h *ImageUploadedHandler) getS3Reader(ctx context.Context, path string) (reader io.ReadCloser, err error) {
+	// Get image from upload bucket
+	reader, _, err = h.S3Upload.Get(path)
 	return
 }
 
 // Upload to S3 from a reader
-func (h *ImageUploadedHandler) uploadToS3(ctx context.Context, path string, psk []byte, reader io.Reader) error {
+func (h *ImageUploadedHandler) uploadToS3(ctx context.Context, path string, reader io.Reader) error {
 	privateBucket := h.S3Private.BucketName()
 	uploadInput := &s3manager.UploadInput{
 		Body:   reader,
 		Bucket: &privateBucket,
 		Key:    &path,
 	}
-	if psk != nil {
-		// Upload file to private bucket
-		_, err := h.S3Private.UploadWithPSK(uploadInput, psk)
-		if err != nil {
-			return err
-		}
-	} else {
-		// Upload file to private bucket
-		_, err := h.S3Private.Upload(uploadInput)
-		if err != nil {
-			return err
-		}
+
+	// Upload file to private bucket
+	_, err := h.S3Private.Upload(uploadInput)
+	if err != nil {
+		return err
 	}
 	return nil
-}
-
-// getVaultKeyForFile reads the encryption key from Vault for the provided path
-func (h *ImageUploadedHandler) getVaultKeyForFile(keyPath string) ([]byte, error) {
-	if len(keyPath) == 0 {
-		return nil, ErrVaultFilenameEmpty
-	}
-
-	vp := path.Join(h.VaultPath, keyPath)
-	pskStr, err := h.VaultCli.ReadKey(vp, vaultKey)
-	if err != nil {
-		return nil, err
-	}
-
-	psk, err := hex.DecodeString(pskStr)
-	if err != nil {
-		return nil, err
-	}
-
-	return psk, nil
-}
-
-// createVaultKeyForFile creates a new encryption key and stores it in Vault for the provided path
-func (h *ImageUploadedHandler) createVaultKeyForFile(keyPath string) ([]byte, error) {
-	psk := make([]byte, 16)
-	rand.Read(psk)
-
-	vaultPath := path.Join(h.VaultPath, keyPath)
-	if err := h.VaultCli.WriteKey(vaultPath, vaultKey, hex.EncodeToString(psk)); err != nil {
-		return nil, err
-	}
-
-	return psk, nil
 }
 
 func (h *ImageUploadedHandler) setImageStatusToFailed(ctx context.Context, imageID string, desc string) {

@@ -34,9 +34,6 @@ var _ event.S3Writer = &S3WriterMock{}
 //             UploadFunc: func(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
 // 	               panic("mock out the Upload method")
 //             },
-//             UploadWithPSKFunc: func(input *s3manager.UploadInput, psk []byte) (*s3manager.UploadOutput, error) {
-// 	               panic("mock out the UploadWithPSK method")
-//             },
 //         }
 //
 //         // use mockedS3Writer in code that requires event.S3Writer
@@ -55,9 +52,6 @@ type S3WriterMock struct {
 
 	// UploadFunc mocks the Upload method.
 	UploadFunc func(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
-
-	// UploadWithPSKFunc mocks the UploadWithPSK method.
-	UploadWithPSKFunc func(input *s3manager.UploadInput, psk []byte) (*s3manager.UploadOutput, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -81,19 +75,11 @@ type S3WriterMock struct {
 			// Options is the options argument value.
 			Options []func(*s3manager.Uploader)
 		}
-		// UploadWithPSK holds details about calls to the UploadWithPSK method.
-		UploadWithPSK []struct {
-			// Input is the input argument value.
-			Input *s3manager.UploadInput
-			// Psk is the psk argument value.
-			Psk []byte
-		}
 	}
 	lockBucketName    sync.RWMutex
 	lockChecker       sync.RWMutex
 	lockSession       sync.RWMutex
 	lockUpload        sync.RWMutex
-	lockUploadWithPSK sync.RWMutex
 }
 
 // BucketName calls BucketNameFunc.
@@ -215,40 +201,5 @@ func (mock *S3WriterMock) UploadCalls() []struct {
 	mock.lockUpload.RLock()
 	calls = mock.calls.Upload
 	mock.lockUpload.RUnlock()
-	return calls
-}
-
-// UploadWithPSK calls UploadWithPSKFunc.
-func (mock *S3WriterMock) UploadWithPSK(input *s3manager.UploadInput, psk []byte) (*s3manager.UploadOutput, error) {
-	if mock.UploadWithPSKFunc == nil {
-		panic("S3WriterMock.UploadWithPSKFunc: method is nil but S3Writer.UploadWithPSK was just called")
-	}
-	callInfo := struct {
-		Input *s3manager.UploadInput
-		Psk   []byte
-	}{
-		Input: input,
-		Psk:   psk,
-	}
-	mock.lockUploadWithPSK.Lock()
-	mock.calls.UploadWithPSK = append(mock.calls.UploadWithPSK, callInfo)
-	mock.lockUploadWithPSK.Unlock()
-	return mock.UploadWithPSKFunc(input, psk)
-}
-
-// UploadWithPSKCalls gets all the calls that were made to UploadWithPSK.
-// Check the length with:
-//     len(mockedS3Writer.UploadWithPSKCalls())
-func (mock *S3WriterMock) UploadWithPSKCalls() []struct {
-	Input *s3manager.UploadInput
-	Psk   []byte
-} {
-	var calls []struct {
-		Input *s3manager.UploadInput
-		Psk   []byte
-	}
-	mock.lockUploadWithPSK.RLock()
-	calls = mock.calls.UploadWithPSK
-	mock.lockUploadWithPSK.RUnlock()
 	return calls
 }

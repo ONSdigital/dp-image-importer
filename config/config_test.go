@@ -22,7 +22,6 @@ func TestConfig(t *testing.T) {
 			Convey("Then the values should be set to the expected defaults", func() {
 				So(cfg.BindAddr, ShouldEqual, "localhost:24800")
 				So(cfg.ServiceAuthToken, ShouldEqual, "4424A9F2-B903-40F4-85F1-240107D1AFAF")
-				So(cfg.EncryptionDisabled, ShouldBeFalse)
 				So(cfg.AwsRegion, ShouldEqual, "eu-west-1")
 				So(cfg.GracefulShutdownTimeout, ShouldEqual, 5*time.Second)
 				So(cfg.HealthCheckInterval, ShouldEqual, 30*time.Second)
@@ -35,9 +34,6 @@ func TestConfig(t *testing.T) {
 				So(cfg.ImageUploadedTopic, ShouldEqual, "image-uploaded")
 				So(cfg.S3PrivateBucketName, ShouldEqual, "csv-exported")
 				So(cfg.S3UploadedBucketName, ShouldEqual, "dp-frontend-florence-file-uploads")
-				So(cfg.VaultAddress, ShouldEqual, "http://localhost:8200")
-				So(cfg.VaultPath, ShouldEqual, "secret/shared/psk")
-				So(cfg.VaultToken, ShouldEqual, "")
 				So(cfg.DownloadServiceURL, ShouldEqual, "http://localhost:23600")
 			})
 

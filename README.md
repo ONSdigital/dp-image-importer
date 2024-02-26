@@ -25,7 +25,6 @@ The service runs in the background consuming messages from Kafka. The messages a
 | ---------------------------- | --------------------------------- | -----------
 | BIND_ADDR                    | :24800                            | The host and port to bind to
 | SERVICE_AUTH_TOKEN           | -                                 | The service token for this app
-| ENCRYPTION_DISABLED          | false                             | Determines whether vault is used and whether files are encrypted on S3
 | AWS_REGION                   | eu-west-1                         | The AWS region
 | GRACEFUL_SHUTDOWN_TIMEOUT    | 5s                                | The graceful shutdown timeout in seconds (`time.Duration` format)
 | HEALTHCHECK_INTERVAL         | 30s                               | Time between self-healthchecks (`time.Duration` format)
@@ -43,9 +42,6 @@ The service runs in the background consuming messages from Kafka. The messages a
 | IMAGE_UPLOADED_TOPIC         | image-uploaded                    | The name of the topic to consume messages from
 | S3_PRIVATE_BUCKET_NAME       | csv-exported                      | Name of the S3 bucket used to store generated images
 | S3_UPLOADED_BUCKET_NAME      | dp-frontend-florence-file-uploads | Name of the S3 bucket used to read original images from
-| VAULT_TOKEN                  | -                                 | Vault token required for the client to talk to vault. (Use `make debug` to create a vault token)
-| VAULT_ADDR                   | http://localhost:8200             | The vault address
-| VAULT_PATH                   | secret/shared/psk                 | The path where the psks will be stored in vault
 | DOWNLOAD_SERVICE_URL         | http://localhost:23600            | The public address of the download service
 
 **Notes:**

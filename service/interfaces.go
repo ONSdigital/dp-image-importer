@@ -18,10 +18,9 @@ import (
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
-	DoGetVault(ctx context.Context, cfg *config.Config) (event.VaultClient, error)
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
-	DoGetS3Client(awsRegion, bucketName string, encryptionEnabled bool) (event.S3Writer, error)
-	DoGetS3ClientWithSession(bucketName string, encryptionEnabled bool, s *session.Session) event.S3Reader
+	DoGetS3Client(awsRegion, bucketName string) (event.S3Writer, error)
+	DoGetS3ClientWithSession(bucketName string, s *session.Session) event.S3Reader
 	DoGetImageAPI(ctx context.Context, cfg *config.Config) event.ImageAPIClient
 	DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error)
 }
