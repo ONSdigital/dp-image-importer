@@ -8,12 +8,14 @@ exclude github.com/gorilla/sessions v1.2.1
 //to avoid  [CVE-2022-29153] CWE-918: Server-Side Request Forgery (SSRF)
 exclude github.com/hashicorp/consul/api v1.1.0
 
-// to avoid 'sonatype-2020-1055' non-CVE vulnerability introduced by github.com/go-ldap/ldap/v3@v3.1.10
-replace github.com/go-ldap/ldap/v3 v3.1.10 => github.com/go-ldap/ldap/v3 v3.4.3
-
-replace github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1
-
-replace google.golang.org/grpc => google.golang.org/grpc v1.58.3
+replace (
+	// to avoid 'sonatype-2020-1055' non-CVE vulnerability introduced by github.com/go-ldap/ldap/v3@v3.1.10
+	github.com/go-ldap/ldap/v3 v3.1.10 => github.com/go-ldap/ldap/v3 v3.4.3
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1
+	google.golang.org/grpc => google.golang.org/grpc v1.58.3
+	// To fix: [CVE-2024-24786] CWE-835: Loop with Unreachable Exit Condition ('Infinite Loop')
+	google.golang.org/protobuf => google.golang.org/protobuf v1.33.0
+)
 
 require (
 	github.com/ONSdigital/dp-api-clients-go v1.43.0
