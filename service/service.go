@@ -18,7 +18,6 @@ type Service struct {
 	router      *mux.Router
 	serviceList *ExternalServiceList
 	healthCheck HealthChecker
-	vault       event.VaultClient
 	consumer    kafka.IConsumerGroup
 }
 
@@ -37,13 +36,6 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 	r := mux.NewRouter()
 	s := serviceList.GetHTTPServer(cfg.BindAddr, r)
 
-	// Get Vault client
-	vault, err := serviceList.GetVault(ctx, cfg)
-	if err != nil {
-		log.Fatal(ctx, "failed to initialise Vault client", err)
-		return nil, err
-	}
-
 	// Get S3 Clients
 	s3Uploaded, s3Private, err := serviceList.GetS3Clients(cfg)
 	if err != nil {
@@ -61,13 +53,11 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	// Event Handler for Kafka Consumer with the created S3 Clients and Vault
+	// Event Handler for Kafka Consumer with the created S3 Clients
 	event.Consume(ctx, consumer, &event.ImageUploadedHandler{
 		AuthToken:          cfg.ServiceAuthToken,
 		S3Private:          s3Private,
 		S3Upload:           s3Uploaded,
-		VaultCli:           vault,
-		VaultPath:          cfg.VaultPath,
 		ImageCli:           imageAPI,
 		DownloadServiceURL: cfg.DownloadServiceURL,
 	}, cfg.KafkaConsumerWorkers)
@@ -79,7 +69,7 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		return nil, err
 	}
 
-	if err := registerCheckers(ctx, hc, vault, s3Private, s3Uploaded, imageAPI, consumer); err != nil {
+	if err := registerCheckers(ctx, hc, s3Private, s3Uploaded, imageAPI, consumer); err != nil {
 		return nil, errors.Wrap(err, "unable to register checkers")
 	}
 
@@ -99,7 +89,6 @@ func Run(ctx context.Context, serviceList *ExternalServiceList, buildTime, gitCo
 		router:      r,
 		serviceList: serviceList,
 		healthCheck: hc,
-		vault:       vault,
 		consumer:    consumer,
 	}, nil
 }
@@ -166,20 +155,12 @@ func (svc *Service) Close(ctx context.Context) error {
 
 func registerCheckers(ctx context.Context,
 	hc HealthChecker,
-	vault event.VaultClient,
 	s3Private event.S3Writer,
 	s3Uploaded event.S3Reader,
 	imageAPI event.ImageAPIClient,
 	consumer kafka.IConsumerGroup) (err error) {
 
 	hasErrors := false
-
-	if vault != nil {
-		if err = hc.AddCheck("Vault client", vault.Checker); err != nil {
-			hasErrors = true
-			log.Error(ctx, "error adding check for vault", err)
-		}
-	}
 
 	if err := hc.AddCheck("S3 private bucket", s3Private.Checker); err != nil {
 		hasErrors = true
