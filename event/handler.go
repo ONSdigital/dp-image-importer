@@ -7,7 +7,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/ONSdigital/dp-api-clients-go/image"
+	"github.com/ONSdigital/dp-api-clients-go/v2/image"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/aws/aws-sdk-go/aws/session"

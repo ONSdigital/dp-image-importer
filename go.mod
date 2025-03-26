@@ -6,12 +6,12 @@ go 1.24
 exclude github.com/hashicorp/consul/api v1.1.0
 
 require (
-	github.com/ONSdigital/dp-api-clients-go v1.43.0
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.264.0
 	github.com/ONSdigital/dp-healthcheck v1.6.3
 	github.com/ONSdigital/dp-kafka/v2 v2.8.0
 	github.com/ONSdigital/dp-net/v2 v2.22.0
 	github.com/ONSdigital/dp-s3 v1.10.0
-	github.com/ONSdigital/log.go/v2 v2.4.3
+	github.com/ONSdigital/log.go/v2 v2.4.4
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -22,8 +22,7 @@ require (
 )
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.263.0 // indirect
-	github.com/ONSdigital/dp-net v1.5.0 // indirect
+	github.com/ONSdigital/dp-net/v3 v3.0.0 // indirect
 	github.com/Shopify/sarama v1.38.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/eapache/go-resiliency v1.6.0 // indirect
@@ -53,6 +52,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/smarty/assertions v1.16.0 // indirect
+	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
@@ -61,5 +61,3 @@ require (
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 )
-
-require go.opentelemetry.io/auto/sdk v1.1.0 // indirect

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ONSdigital/dp-api-clients-go/image"
+	"github.com/ONSdigital/dp-api-clients-go/v2/image"
 	"github.com/ONSdigital/dp-image-importer/event"
 	"github.com/ONSdigital/dp-image-importer/event/mock"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"

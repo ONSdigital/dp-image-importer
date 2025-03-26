@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/ONSdigital/dp-api-clients-go/image"
+	"github.com/ONSdigital/dp-api-clients-go/v2/image"
 	"github.com/ONSdigital/dp-image-importer/config"
 	"github.com/ONSdigital/log.go/v2/log"
 )
