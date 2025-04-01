@@ -16,7 +16,7 @@ import (
 
 var testCtx = context.Background()
 
-var errHandler = errors.New("Handler Error")
+var errHandler = errors.New("handler error")
 
 var testEvent = event.ImageUploaded{
 	ImageID:  "123",

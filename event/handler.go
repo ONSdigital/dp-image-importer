@@ -10,8 +10,9 @@ import (
 	"github.com/ONSdigital/dp-api-clients-go/v2/image"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/log.go/v2/log"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 //go:generate moq -out mock/s3_reader.go -pkg mock . S3Reader
@@ -38,17 +39,18 @@ type ImageUploadedHandler struct {
 // S3Writer defines the required methods from dp-s3 to interact with a particular bucket of AWS S3
 type S3Writer interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
-	Session() *session.Session
+	Config() aws.Config
 	BucketName() string
-	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
+	Upload(ctx context.Context, input *s3.PutObjectInput, options ...func(*manager.Uploader)) (*manager.UploadOutput, error)
+	Get(ctx context.Context, key string) (io.ReadCloser, *int64, error)
 }
 
 // S3Reader defines the required methods from dp-s3 to read data to an AWS S3 Bucket
 type S3Reader interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
-	Session() *session.Session
+	Config() aws.Config
 	BucketName() string
-	Get(key string) (io.ReadCloser, *int64, error)
+	Get(ctx context.Context, key string) (io.ReadCloser, *int64, error)
 }
 
 // ImageAPIClient defines the required methods from image API client
@@ -135,21 +137,21 @@ func (h *ImageUploadedHandler) Handle(ctx context.Context, event *ImageUploaded)
 // Get an S3 reader
 func (h *ImageUploadedHandler) getS3Reader(ctx context.Context, path string) (reader io.ReadCloser, err error) {
 	// Get image from upload bucket
-	reader, _, err = h.S3Upload.Get(path)
+	reader, _, err = h.S3Upload.Get(ctx, path)
 	return
 }
 
 // Upload to S3 from a reader
 func (h *ImageUploadedHandler) uploadToS3(ctx context.Context, path string, reader io.Reader) error {
 	privateBucket := h.S3Private.BucketName()
-	uploadInput := &s3manager.UploadInput{
+	uploadInput := &s3.PutObjectInput{
 		Body:   reader,
 		Bucket: &privateBucket,
 		Key:    &path,
 	}
 
 	// Upload file to private bucket
-	_, err := h.S3Private.Upload(uploadInput)
+	_, err := h.S3Private.Upload(ctx, uploadInput)
 	if err != nil {
 		return err
 	}
