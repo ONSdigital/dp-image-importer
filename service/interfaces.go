@@ -8,7 +8,7 @@ import (
 	"github.com/ONSdigital/dp-image-importer/config"
 	"github.com/ONSdigital/dp-image-importer/event"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
 //go:generate moq -out mock/initialiser.go -pkg mock . Initialiser
@@ -19,8 +19,8 @@ import (
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
-	DoGetS3Client(awsRegion, bucketName string) (event.S3Writer, error)
-	DoGetS3ClientWithSession(bucketName string, s *session.Session) event.S3Reader
+	DoGetS3Client(ctx context.Context, awsRegion, bucketName string) (event.S3Writer, error)
+	DoGetS3ClientWithConfig(bucketName string, cfg aws.Config) event.S3Reader
 	DoGetImageAPI(ctx context.Context, cfg *config.Config) event.ImageAPIClient
 	DoGetKafkaConsumer(ctx context.Context, cfg *config.Config) (kafka.IConsumerGroup, error)
 }
