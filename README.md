@@ -42,7 +42,10 @@ The service runs in the background consuming messages from Kafka. The messages a
 | IMAGE_UPLOADED_TOPIC         | image-uploaded                    | The name of the topic to consume messages from
 | S3_PRIVATE_BUCKET_NAME       | csv-exported                      | Name of the S3 bucket used to store generated images
 | S3_UPLOADED_BUCKET_NAME      | dp-frontend-florence-file-uploads | Name of the S3 bucket used to read original images from
-| DOWNLOAD_SERVICE_URL         | <http://localhost:23600>           | The public address of the download service
+| S3_LOCAL_URL                 |                                   | S3 Configuration for integration tests
+| S3_LOCAL_ID                  |                                   | S3 Configuration for integration tests
+| S3_LOCAL_SECRET              |                                   | S3 Configuration for integration tests
+| DOWNLOAD_SERVICE_URL         | <http://localhost:23600>          | The public address of the download service
 
 **Notes:**
 

@@ -28,6 +28,9 @@ type Config struct {
 	S3PrivateBucketName        string        `envconfig:"S3_PRIVATE_BUCKET_NAME"`
 	S3UploadedBucketName       string        `envconfig:"S3_UPLOADED_BUCKET_NAME"`
 	DownloadServiceURL         string        `envconfig:"DOWNLOAD_SERVICE_URL"`
+	LocalS3URL                 string        `envconfig:"S3_LOCAL_URL"`
+	LocalS3ID                  string        `envconfig:"S3_LOCAL_ID"`
+	LocalS3Secret              string        `envconfig:"S3_LOCAL_SECRET"`
 }
 
 var cfg *Config

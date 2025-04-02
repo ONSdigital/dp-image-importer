@@ -13,6 +13,8 @@ import (
 	dps3 "github.com/ONSdigital/dp-s3/v3"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
@@ -54,9 +56,7 @@ func (e *ExternalServiceList) GetS3Clients(cfg *config.Config) (s3Uploaded event
 		return nil, nil, err
 	}
 	e.S3Private = true
-	s3Uploaded = e.Init.DoGetS3ClientWithConfig(cfg.S3UploadedBucketName, aws.Config{
-		Region: cfg.AwsRegion,
-	})
+	s3Uploaded, err = e.Init.DoGetS3Client(ctx, cfg.AwsRegion, cfg.S3UploadedBucketName)
 	e.S3Uploaded = true
 	return
 }
@@ -97,15 +97,36 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 
 // DoGetS3Client creates a new S3Client for the provided AWS region and bucket name.
 func (e *Init) DoGetS3Client(ctx context.Context, awsRegion, bucketName string) (event.S3Writer, error) {
-	config, err := awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(awsRegion))
+	cfg, _ := config.Get()
 
-	if err != nil {
-		return nil, err
+	var s3Client *dps3.Client
+
+	if cfg.LocalS3URL != "" {
+		config, err := awsConfig.LoadDefaultConfig(
+			ctx, awsConfig.WithRegion(awsRegion),
+			awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.LocalS3ID, cfg.LocalS3Secret, "")),
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		s3Client = dps3.NewClientWithConfig(bucketName, config, func(options *s3.Options) {
+			options.BaseEndpoint = aws.String(cfg.LocalS3URL)
+			options.UsePathStyle = true
+		})
+
+	} else {
+		config, err := awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(awsRegion))
+
+		if err != nil {
+			return nil, err
+		}
+
+		s3Client = dps3.NewClientWithConfig(bucketName, config)
 	}
 
-	s3Client := dps3.NewClientWithConfig(bucketName, config)
-
-	return s3Client, err
+	return s3Client, nil
 }
 
 // DoGetS3ClientWithConfig creates a new S3Clienter (extension of S3Client with Upload operations)
