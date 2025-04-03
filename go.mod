@@ -12,7 +12,7 @@ require (
 	github.com/ONSdigital/dp-net v1.5.0
 	github.com/ONSdigital/dp-s3 v1.10.0
 	github.com/ONSdigital/log.go/v2 v2.4.3
-	github.com/aws/aws-sdk-go v1.50.24
+	github.com/aws/aws-sdk-go v1.55.6
 	github.com/gorilla/mux v1.8.1
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -60,6 +60,4 @@ require (
 	golang.org/x/net v0.30.0 // indirect
 	golang.org/x/sync v0.8.0 // indirect
 	golang.org/x/sys v0.26.0 // indirect
-	// protobuf is explicitly added here to avoid a vulnerable package, don't remove it by accident.
-	google.golang.org/protobuf v1.34.2 // indirect
 )
