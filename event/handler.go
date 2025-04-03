@@ -40,6 +40,7 @@ type S3Writer interface {
 	Checker(ctx context.Context, state *healthcheck.CheckState) error
 	Session() *session.Session
 	BucketName() string
+	Get(key string) (io.ReadCloser, *int64, error)
 	Upload(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error)
 }
 

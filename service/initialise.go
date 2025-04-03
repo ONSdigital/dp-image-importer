@@ -11,6 +11,8 @@ import (
 	kafka "github.com/ONSdigital/dp-kafka/v2"
 	dphttp "github.com/ONSdigital/dp-net/http"
 	dps3 "github.com/ONSdigital/dp-s3"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 )
 
@@ -52,7 +54,10 @@ func (e *ExternalServiceList) GetS3Clients(cfg *config.Config) (s3Uploaded event
 		return nil, nil, err
 	}
 	e.S3Private = true
-	s3Uploaded = e.Init.DoGetS3ClientWithSession(cfg.S3UploadedBucketName, s3Private.Session())
+	s3Uploaded, err = e.Init.DoGetS3Client(cfg.AwsRegion, cfg.S3UploadedBucketName)
+	if err != nil {
+		return nil, nil, err
+	}
 	e.S3Uploaded = true
 	return
 }
@@ -93,6 +98,27 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 
 // DoGetS3Client creates a new S3Client for the provided AWS region and bucket name.
 func (e *Init) DoGetS3Client(awsRegion, bucketName string) (event.S3Writer, error) {
+	cfg, _ := config.Get()
+	var s *session.Session
+	var err error
+
+	if cfg.LocalS3URL != "" {
+		if cfg.LocalS3URL != "" {
+			s, err = session.NewSession(&aws.Config{
+				Endpoint:         aws.String(cfg.LocalS3URL),
+				Region:           aws.String(awsRegion),
+				S3ForcePathStyle: aws.Bool(true),
+				Credentials:      credentials.NewStaticCredentials(cfg.LocalS3ID, cfg.LocalS3Secret, ""),
+			})
+		} else {
+			s, err = session.NewSession(&aws.Config{
+				Region: aws.String(awsRegion),
+			})
+		}
+
+		return dps3.NewUploaderWithSession(bucketName, s), err
+	}
+
 	return dps3.NewUploader(awsRegion, bucketName)
 }
 
