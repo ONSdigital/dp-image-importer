@@ -9,6 +9,7 @@ import (
 	"github.com/ONSdigital/dp-image-importer/event"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"io"
 	"sync"
 )
 
@@ -18,34 +19,40 @@ var _ event.S3Writer = &S3WriterMock{}
 
 // S3WriterMock is a mock implementation of event.S3Writer.
 //
-//     func TestSomethingThatUsesS3Writer(t *testing.T) {
+//	func TestSomethingThatUsesS3Writer(t *testing.T) {
 //
-//         // make and configure a mocked event.S3Writer
-//         mockedS3Writer := &S3WriterMock{
-//             BucketNameFunc: func() string {
-// 	               panic("mock out the BucketName method")
-//             },
-//             CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
-// 	               panic("mock out the Checker method")
-//             },
-//             SessionFunc: func() *session.Session {
-// 	               panic("mock out the Session method")
-//             },
-//             UploadFunc: func(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
-// 	               panic("mock out the Upload method")
-//             },
-//         }
+//		// make and configure a mocked event.S3Writer
+//		mockedS3Writer := &S3WriterMock{
+//			BucketNameFunc: func() string {
+//				panic("mock out the BucketName method")
+//			},
+//			CheckerFunc: func(ctx context.Context, state *healthcheck.CheckState) error {
+//				panic("mock out the Checker method")
+//			},
+//			GetFunc: func(key string) (io.ReadCloser, *int64, error) {
+//				panic("mock out the Get method")
+//			},
+//			SessionFunc: func() *session.Session {
+//				panic("mock out the Session method")
+//			},
+//			UploadFunc: func(input *s3manager.UploadInput, options ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
+//				panic("mock out the Upload method")
+//			},
+//		}
 //
-//         // use mockedS3Writer in code that requires event.S3Writer
-//         // and then make assertions.
+//		// use mockedS3Writer in code that requires event.S3Writer
+//		// and then make assertions.
 //
-//     }
+//	}
 type S3WriterMock struct {
 	// BucketNameFunc mocks the BucketName method.
 	BucketNameFunc func() string
 
 	// CheckerFunc mocks the Checker method.
 	CheckerFunc func(ctx context.Context, state *healthcheck.CheckState) error
+
+	// GetFunc mocks the Get method.
+	GetFunc func(key string) (io.ReadCloser, *int64, error)
 
 	// SessionFunc mocks the Session method.
 	SessionFunc func() *session.Session
@@ -65,6 +72,11 @@ type S3WriterMock struct {
 			// State is the state argument value.
 			State *healthcheck.CheckState
 		}
+		// Get holds details about calls to the Get method.
+		Get []struct {
+			// Key is the key argument value.
+			Key string
+		}
 		// Session holds details about calls to the Session method.
 		Session []struct {
 		}
@@ -76,10 +88,11 @@ type S3WriterMock struct {
 			Options []func(*s3manager.Uploader)
 		}
 	}
-	lockBucketName    sync.RWMutex
-	lockChecker       sync.RWMutex
-	lockSession       sync.RWMutex
-	lockUpload        sync.RWMutex
+	lockBucketName sync.RWMutex
+	lockChecker    sync.RWMutex
+	lockGet        sync.RWMutex
+	lockSession    sync.RWMutex
+	lockUpload     sync.RWMutex
 }
 
 // BucketName calls BucketNameFunc.
@@ -97,7 +110,8 @@ func (mock *S3WriterMock) BucketName() string {
 
 // BucketNameCalls gets all the calls that were made to BucketName.
 // Check the length with:
-//     len(mockedS3Writer.BucketNameCalls())
+//
+//	len(mockedS3Writer.BucketNameCalls())
 func (mock *S3WriterMock) BucketNameCalls() []struct {
 } {
 	var calls []struct {
@@ -128,7 +142,8 @@ func (mock *S3WriterMock) Checker(ctx context.Context, state *healthcheck.CheckS
 
 // CheckerCalls gets all the calls that were made to Checker.
 // Check the length with:
-//     len(mockedS3Writer.CheckerCalls())
+//
+//	len(mockedS3Writer.CheckerCalls())
 func (mock *S3WriterMock) CheckerCalls() []struct {
 	Ctx   context.Context
 	State *healthcheck.CheckState
@@ -140,6 +155,38 @@ func (mock *S3WriterMock) CheckerCalls() []struct {
 	mock.lockChecker.RLock()
 	calls = mock.calls.Checker
 	mock.lockChecker.RUnlock()
+	return calls
+}
+
+// Get calls GetFunc.
+func (mock *S3WriterMock) Get(key string) (io.ReadCloser, *int64, error) {
+	if mock.GetFunc == nil {
+		panic("S3WriterMock.GetFunc: method is nil but S3Writer.Get was just called")
+	}
+	callInfo := struct {
+		Key string
+	}{
+		Key: key,
+	}
+	mock.lockGet.Lock()
+	mock.calls.Get = append(mock.calls.Get, callInfo)
+	mock.lockGet.Unlock()
+	return mock.GetFunc(key)
+}
+
+// GetCalls gets all the calls that were made to Get.
+// Check the length with:
+//
+//	len(mockedS3Writer.GetCalls())
+func (mock *S3WriterMock) GetCalls() []struct {
+	Key string
+} {
+	var calls []struct {
+		Key string
+	}
+	mock.lockGet.RLock()
+	calls = mock.calls.Get
+	mock.lockGet.RUnlock()
 	return calls
 }
 
@@ -158,7 +205,8 @@ func (mock *S3WriterMock) Session() *session.Session {
 
 // SessionCalls gets all the calls that were made to Session.
 // Check the length with:
-//     len(mockedS3Writer.SessionCalls())
+//
+//	len(mockedS3Writer.SessionCalls())
 func (mock *S3WriterMock) SessionCalls() []struct {
 } {
 	var calls []struct {
@@ -189,7 +237,8 @@ func (mock *S3WriterMock) Upload(input *s3manager.UploadInput, options ...func(*
 
 // UploadCalls gets all the calls that were made to Upload.
 // Check the length with:
-//     len(mockedS3Writer.UploadCalls())
+//
+//	len(mockedS3Writer.UploadCalls())
 func (mock *S3WriterMock) UploadCalls() []struct {
 	Input   *s3manager.UploadInput
 	Options []func(*s3manager.Uploader)
