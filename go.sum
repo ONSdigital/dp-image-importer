@@ -50,8 +50,8 @@ github.com/ONSdigital/dp-api-clients-go/v2 v2.187.0/go.mod h1:JhWrjETosIKYjbLoa3
 github.com/ONSdigital/dp-api-clients-go/v2 v2.251.1-0.20230419120408-e8f5f9d25e0f/go.mod h1:LTK1xN1heJYvmlcBqW6BTwAS3tBHSJIabbnQvJblgXs=
 github.com/ONSdigital/dp-api-clients-go/v2 v2.251.1-0.20230419122538-59e333f2e3ce/go.mod h1:yyY4HQjvDuwlNTycBU+usyxlSC+gPcSQW+B23ilBRvM=
 github.com/ONSdigital/dp-api-clients-go/v2 v2.252.0/go.mod h1:p49IHBmIH5fbAHJ1PrqGbtoHS45jfkYQZeRuIB+CgPQ=
-github.com/ONSdigital/dp-api-clients-go/v2 v2.265.0 h1:NrBaAv0Xwe87W1E5kLHiRJpPlWRawT+2VkX0eLJFbho=
-github.com/ONSdigital/dp-api-clients-go/v2 v2.265.0/go.mod h1:jsZvK/OUrHigv5tNKvA+HwgBu7F6XnRldO4IvMv52Lg=
+github.com/ONSdigital/dp-api-clients-go/v2 v2.266.0 h1:NQbu+x2Q7ZhrjGKvN73qVxG/nqX+TJck7iCzSHHEp98=
+github.com/ONSdigital/dp-api-clients-go/v2 v2.266.0/go.mod h1:bLseTP21r8LCStUEeOdVPyqtrTomOFP/azPjKWW4deA=
 github.com/ONSdigital/dp-healthcheck v1.0.5/go.mod h1:2wbVAUHMl9+4tWhUlxYUuA1dnf2+NrwzC+So5f5BMLk=
 github.com/ONSdigital/dp-healthcheck v1.1.0/go.mod h1:vZwyjMJiCHjp/sJ2R1ZEqzZT0rJ0+uHVGwxqdP4J5vg=
 github.com/ONSdigital/dp-healthcheck v1.2.3/go.mod h1:XUhXoDIWPCdletDtpDOoXhmDFcc9b/kbedx96jN75aI=
@@ -588,8 +588,8 @@ golang.org/x/sync v0.0.0-20201207232520-09787c993a3a/go.mod h1:RxMgew5VJxzue5/jJ
 golang.org/x/sync v0.0.0-20210220032951-036812b2e83c/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.1.0/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
-golang.org/x/sync v0.8.0 h1:3NFvSEYkUoMifnESzZl15y791HH1qU2xm6eCJU5ZPXQ=
-golang.org/x/sync v0.8.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
+golang.org/x/sync v0.12.0 h1:MHc5BpPuC30uJk597Ri8TV3CNZcTLu6B6z4lJy+g6Jw=
+golang.org/x/sync v0.12.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
 golang.org/x/sys v0.0.0-20180830151530-49385e6e1522/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
 golang.org/x/sys v0.0.0-20190222072716-a9d3bda3a223/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
