@@ -29,7 +29,7 @@ The service runs in the background consuming messages from Kafka. The messages a
 | GRACEFUL_SHUTDOWN_TIMEOUT    | 5s                                | The graceful shutdown timeout in seconds (`time.Duration` format)
 | HEALTHCHECK_INTERVAL         | 30s                               | Time between self-healthchecks (`time.Duration` format)
 | HEALTHCHECK_CRITICAL_TIMEOUT | 90s                               | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format)
-| IMAGE_API_URL                | <http://localhost:24700>            | The image api url
+| IMAGE_API_URL                | <http://localhost:24700>          | The image api url
 | KAFKA_ADDR                   | `localhost:9092`                  | The address of Kafka brokers (comma-separated values)
 | KAFKA_VERSION                | `1.0.2`                           | The version of Kafka
 | KAFKA_SEC_PROTO              | _unset_            (only `TLS`)   | if set to `TLS`, kafka connections will use TLS
