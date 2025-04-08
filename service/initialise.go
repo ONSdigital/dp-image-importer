@@ -57,6 +57,9 @@ func (e *ExternalServiceList) GetS3Clients(cfg *config.Config) (s3Uploaded event
 	}
 	e.S3Private = true
 	s3Uploaded, err = e.Init.DoGetS3Client(ctx, cfg.AwsRegion, cfg.S3UploadedBucketName)
+	if err != nil {
+		return nil, nil, err
+	}
 	e.S3Uploaded = true
 	return
 }
@@ -106,7 +109,6 @@ func (e *Init) DoGetS3Client(ctx context.Context, awsRegion, bucketName string) 
 			ctx, awsConfig.WithRegion(awsRegion),
 			awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.LocalS3ID, cfg.LocalS3Secret, "")),
 		)
-
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +120,6 @@ func (e *Init) DoGetS3Client(ctx context.Context, awsRegion, bucketName string) 
 
 	} else {
 		config, err := awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(awsRegion))
-
 		if err != nil {
 			return nil, err
 		}
