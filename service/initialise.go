@@ -4,14 +4,17 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/ONSdigital/dp-api-clients-go/image"
+	"github.com/ONSdigital/dp-api-clients-go/v2/image"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	"github.com/ONSdigital/dp-image-importer/config"
 	"github.com/ONSdigital/dp-image-importer/event"
 	kafka "github.com/ONSdigital/dp-kafka/v2"
-	dphttp "github.com/ONSdigital/dp-net/http"
-	dps3 "github.com/ONSdigital/dp-s3"
-	"github.com/aws/aws-sdk-go/aws/session"
+	dphttp "github.com/ONSdigital/dp-net/v3/http"
+	dps3 "github.com/ONSdigital/dp-s3/v3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 // ExternalServiceList holds the initialiser and initialisation state of external services.
@@ -47,12 +50,16 @@ func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler
 
 // GetS3Clients returns S3 clients uploaded and private. They share the same AWS session.
 func (e *ExternalServiceList) GetS3Clients(cfg *config.Config) (s3Uploaded event.S3Reader, s3Private event.S3Writer, err error) {
-	s3Private, err = e.Init.DoGetS3Client(cfg.AwsRegion, cfg.S3PrivateBucketName)
+	ctx := context.Background()
+	s3Private, err = e.Init.DoGetS3Client(ctx, cfg.AwsRegion, cfg.S3PrivateBucketName)
 	if err != nil {
 		return nil, nil, err
 	}
 	e.S3Private = true
-	s3Uploaded = e.Init.DoGetS3ClientWithSession(cfg.S3UploadedBucketName, s3Private.Session())
+	s3Uploaded, err = e.Init.DoGetS3Client(ctx, cfg.AwsRegion, cfg.S3UploadedBucketName)
+	if err != nil {
+		return nil, nil, err
+	}
 	e.S3Uploaded = true
 	return
 }
@@ -92,14 +99,41 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 }
 
 // DoGetS3Client creates a new S3Client for the provided AWS region and bucket name.
-func (e *Init) DoGetS3Client(awsRegion, bucketName string) (event.S3Writer, error) {
-	return dps3.NewUploader(awsRegion, bucketName)
+func (e *Init) DoGetS3Client(ctx context.Context, awsRegion, bucketName string) (event.S3Writer, error) {
+	cfg, _ := config.Get()
+
+	var s3Client *dps3.Client
+
+	if cfg.LocalS3URL != "" {
+		config, err := awsConfig.LoadDefaultConfig(
+			ctx, awsConfig.WithRegion(awsRegion),
+			awsConfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.LocalS3ID, cfg.LocalS3Secret, "")),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		s3Client = dps3.NewClientWithConfig(bucketName, config, func(options *s3.Options) {
+			options.BaseEndpoint = aws.String(cfg.LocalS3URL)
+			options.UsePathStyle = true
+		})
+
+	} else {
+		config, err := awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion(awsRegion))
+		if err != nil {
+			return nil, err
+		}
+
+		s3Client = dps3.NewClientWithConfig(bucketName, config)
+	}
+
+	return s3Client, nil
 }
 
-// DoGetS3ClientWithSession creates a new S3Clienter (extension of S3Client with Upload operations)
+// DoGetS3ClientWithConfig creates a new S3Clienter (extension of S3Client with Upload operations)
 // for the provided bucket name, using an existing AWS session
-func (e *Init) DoGetS3ClientWithSession(bucketName string, s *session.Session) event.S3Reader {
-	return dps3.NewClientWithSession(bucketName, s)
+func (e *Init) DoGetS3ClientWithConfig(bucketName string, cfg aws.Config) event.S3Reader {
+	return dps3.NewClientWithConfig(bucketName, cfg)
 }
 
 // DoGetImageAPI returns an Image API client

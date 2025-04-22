@@ -6,7 +6,7 @@ ONS service that imports uploaded images and adds them to a private bucket
 
 * Run `make debug`
 
-The service runs in the background consuming messages from Kafka. The messages are produced by the 
+The service runs in the background consuming messages from Kafka. The messages are produced by the
 [image API](https://github.com/ONSdigital/dp-image-api) and an example image can be created using the helper script,
 `make produce`.
 
@@ -29,7 +29,7 @@ The service runs in the background consuming messages from Kafka. The messages a
 | GRACEFUL_SHUTDOWN_TIMEOUT    | 5s                                | The graceful shutdown timeout in seconds (`time.Duration` format)
 | HEALTHCHECK_INTERVAL         | 30s                               | Time between self-healthchecks (`time.Duration` format)
 | HEALTHCHECK_CRITICAL_TIMEOUT | 90s                               | Time to wait until an unhealthy dependent propagates its state to make this app unhealthy (`time.Duration` format)
-| IMAGE_API_URL                | http://localhost:24700            | The image api url
+| IMAGE_API_URL                | <http://localhost:24700>          | The image api url
 | KAFKA_ADDR                   | `localhost:9092`                  | The address of Kafka brokers (comma-separated values)
 | KAFKA_VERSION                | `1.0.2`                           | The version of Kafka
 | KAFKA_SEC_PROTO              | _unset_            (only `TLS`)   | if set to `TLS`, kafka connections will use TLS
@@ -42,7 +42,10 @@ The service runs in the background consuming messages from Kafka. The messages a
 | IMAGE_UPLOADED_TOPIC         | image-uploaded                    | The name of the topic to consume messages from
 | S3_PRIVATE_BUCKET_NAME       | csv-exported                      | Name of the S3 bucket used to store generated images
 | S3_UPLOADED_BUCKET_NAME      | dp-frontend-florence-file-uploads | Name of the S3 bucket used to read original images from
-| DOWNLOAD_SERVICE_URL         | http://localhost:23600            | The public address of the download service
+| S3_LOCAL_URL                 |                                   | S3 Configuration for integration tests
+| S3_LOCAL_ID                  |                                   | S3 Configuration for integration tests
+| S3_LOCAL_SECRET              |                                   | S3 Configuration for integration tests
+| DOWNLOAD_SERVICE_URL         | <http://localhost:23600>          | The public address of the download service
 
 **Notes:**
 
@@ -62,7 +65,6 @@ See [CONTRIBUTING](CONTRIBUTING.md) for details.
 
 ### License
 
-Copyright © 2021, Office for National Statistics (https://www.ons.gov.uk)
+Copyright © 2025, Office for National Statistics (<https://www.ons.gov.uk>)
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
-
