@@ -73,13 +73,17 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/image v0.29.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/image v0.30.0 // indirect
+	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
 
-// This is required to remove vulnerability CVE-2024-24786
-tool google.golang.org/protobuf
+tool (
+	// Removes vulnerability for [CVE-2023-29408] CWE-770: Allocation of Resources Without Limits or Throttling
+	golang.org/x/image
+	// This is required to remove vulnerability CVE-2024-24786
+	google.golang.org/protobuf
+)
