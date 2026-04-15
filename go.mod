@@ -6,7 +6,7 @@ go 1.26.0
 exclude github.com/hashicorp/consul/api v1.1.0
 
 require (
-	github.com/ONSdigital/dp-api-clients-go/v2 v2.278.0
+	github.com/ONSdigital/dp-api-clients-go/v2 v2.273.0
 	github.com/ONSdigital/dp-healthcheck v1.6.4
 	github.com/ONSdigital/dp-kafka/v2 v2.8.0
 	github.com/ONSdigital/dp-net/v3 v3.10.0
@@ -76,7 +76,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.42.0 // indirect
 	go.opentelemetry.io/otel/trace v1.42.0 // indirect
 	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/image v0.30.0 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
