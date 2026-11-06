@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/ONSdigital/dp-api-clients-go/v2 v2.278.0
 	github.com/ONSdigital/dp-healthcheck v1.6.4
-	github.com/ONSdigital/dp-kafka/v5 v5.1.0
+	github.com/ONSdigital/dp-kafka/v5 v5.2.0
 	github.com/ONSdigital/dp-net/v3 v3.10.0
 	github.com/ONSdigital/dp-s3/v3 v3.3.0
 	github.com/ONSdigital/log.go/v2 v2.5.2
@@ -59,7 +59,7 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jtolds/gls v4.20.0+incompatible // indirect
 	github.com/justinas/alice v1.2.0 // indirect
-	github.com/klauspost/compress v1.18.2 // indirect
+	github.com/klauspost/compress v1.20.3 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pierrec/lz4/v4 v4.1.23 // indirect
